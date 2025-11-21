@@ -500,6 +500,7 @@ app.get('/api/data', async (req, res) => {
     query += `
       |> derivative(unit: 1s, nonNegative: true)
       |> map(fn: (r) => ({ r with _value: r._value * 8.0 / 1000000.0 }))
+      |> filter(fn: (r) => r._value > 0)
     `;
     
     console.log('[API/DATA] Query:', query.substring(0, 300));
