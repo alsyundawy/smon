@@ -1,7 +1,13 @@
 {
   "pollingInterval": 60000,
-  "dataRetention": 30,
   "pingInterval": 60000,
+  "dataRetention": 30,
+  "influxdb": {
+    "url": "http://localhost:8086",
+    "org": "indobsd",
+    "bucket": "graphts",
+    "token": "Sag1KBQNatpHmaMDoCDLB1Vrt-QAMTfwL_K13gRYjUihTrzlRSOdoDB9HwH6imIJpSMz4XgfG9AEAL4FtwUZpQ=="
+  },
   "pingNotifications": {
     "enabled": true,
     "notifyOnDown": true,

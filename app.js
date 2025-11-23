@@ -26,15 +26,6 @@ config.snmpDevices.forEach(device => {
   }
 });
 
-// InfluxDB configuration
-const token = 'Sag1KBQNatpHmaMDoCDLB1Vrt-QAMTfwL_K13gRYjUihTrzlRSOdoDB9HwH6imIJpSMz4XgfG9AEAL4FtwUZpQ==';
-const org = 'indobsd';
-const bucket = 'graphts';
-const url = 'http://localhost:8086';
-
-const client = new InfluxDB({ url, token });
-const queryApi = client.getQueryApi(org);
-
 // Express configuration
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -63,16 +54,36 @@ app.use(requireAuth);
 let settings = {
   pollingInterval: 300000, // 5 minutes in milliseconds
   pingInterval: 30000, // 30 seconds in milliseconds
-  dataRetention: 30 // days
+  dataRetention: 30, // days
+  influxdb: {
+    url: 'http://localhost:8086',
+    org: 'indobsd',
+    bucket: 'graphts',
+    token: 'Sag1KBQNatpHmaMDoCDLB1Vrt-QAMTfwL_K13gRYjUihTrzlRSOdoDB9HwH6imIJpSMz4XgfG9AEAL4FtwUZpQ=='
+  }
 };
 
 // Load or create settings file
 const settingsFile = './settings.json';
 if (fs.existsSync(settingsFile)) {
-  settings = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
+  const loadedSettings = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
+  settings = { ...settings, ...loadedSettings };
+  // Ensure influxdb object exists
+  if (!settings.influxdb) {
+    settings.influxdb = {
+      url: 'http://localhost:8086',
+      org: 'indobsd',
+      bucket: 'graphts',
+      token: 'Sag1KBQNatpHmaMDoCDLB1Vrt-QAMTfwL_K13gRYjUihTrzlRSOdoDB9HwH6imIJpSMz4XgfG9AEAL4FtwUZpQ=='
+    };
+  }
 } else {
   fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2));
 }
+
+// InfluxDB configuration from settings
+const client = new InfluxDB({ url: settings.influxdb.url, token: settings.influxdb.token });
+const queryApi = client.getQueryApi(settings.influxdb.org);
 
 // Ping configuration
 let pingTargets = [
@@ -191,9 +202,24 @@ app.get('/', (req, res) => {
     }
   });
   
+  // Ensure pingTargets is defined
+  const safePingTargets = pingTargets || [];
+  
+  // Group ping targets by group for dashboard
+  const groupedPingTargets = {};
+  safePingTargets.forEach(target => {
+    if (!groupedPingTargets[target.group]) {
+      groupedPingTargets[target.group] = [];
+    }
+    groupedPingTargets[target.group].push(target);
+  });
+  
   res.render('index', { 
     devices: snmpDevices,
-    interfaces: allInterfaces
+    interfaces: allInterfaces,
+    pingTargets: safePingTargets,
+    groupedPingTargets: groupedPingTargets,
+    settings: settings
   });
 });
 
@@ -546,6 +572,90 @@ app.post('/api/settings/ping-notifications', (req, res) => {
   }
 });
 
+// API to test InfluxDB connection
+app.post('/api/settings/influxdb/test', async (req, res) => {
+  try {
+    const { url, org, bucket, token } = req.body;
+    
+    if (!url || !org || !bucket || !token) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+    
+    // Create temporary InfluxDB client
+    const testClient = new InfluxDB({ url, token });
+    const testQueryApi = testClient.getQueryApi(org);
+    
+    // Try a simple query to test connection
+    const fluxQuery = `from(bucket: "${bucket}") |> range(start: -1m) |> limit(n: 1)`;
+    
+    return new Promise((resolve) => {
+      const results = [];
+      testQueryApi.queryRows(fluxQuery, {
+        next(row, tableMeta) {
+          results.push(row);
+        },
+        error(error) {
+          console.error('InfluxDB test error:', error);
+          res.json({
+            success: false,
+            error: error.message || 'Connection failed'
+          });
+          resolve();
+        },
+        complete() {
+          res.json({
+            success: true,
+            message: 'Connection successful'
+          });
+          resolve();
+        }
+      });
+    });
+  } catch (err) {
+    console.error('Error testing InfluxDB connection:', err);
+    res.status(500).json({ 
+      success: false,
+      error: err.message || 'Internal Server Error' 
+    });
+  }
+});
+
+// API to save InfluxDB settings
+app.post('/api/settings/influxdb', (req, res) => {
+  try {
+    const { url, org, bucket, token } = req.body;
+    
+    if (!url || !org || !bucket || !token) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+    
+    if (!settings.influxdb) {
+      settings.influxdb = {};
+    }
+    
+    settings.influxdb.url = url.trim();
+    settings.influxdb.org = org.trim();
+    settings.influxdb.bucket = bucket.trim();
+    settings.influxdb.token = token.trim();
+    
+    saveSettings();
+    
+    res.json({
+      success: true,
+      message: 'InfluxDB settings saved successfully',
+      influxdb: {
+        url: settings.influxdb.url,
+        org: settings.influxdb.org,
+        bucket: settings.influxdb.bucket,
+        token: '***' // Don't send token back
+      }
+    });
+  } catch (err) {
+    console.error('Error saving InfluxDB settings:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 // API to discover interfaces via SNMP walk
 app.post('/api/discover-interfaces', (req, res) => {
   try {
@@ -758,33 +868,6 @@ app.post('/api/devices/:deviceId/select-interfaces', (req, res) => {
 });
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Route for home
-app.get('/', async (req, res) => {
-  try {
-    console.log('Route / called');
-    const deviceId = req.query.device || Object.keys(snmpDevices)[0] || null;
-    
-    if (!deviceId || !snmpDevices[deviceId]) {
-      return res.status(400).send('Device not found');
-    }
-
-    // Get interfaces for the selected device from config
-    const selectedDevice = snmpDevices[deviceId];
-    const interfaces = selectedDevice.selectedInterfaces || [];
-
-    // For dashboard, just render without InfluxDB query - faster load
-    // Query is only done in monitoring page
-    res.render('index', { 
-      devices: snmpDevices,
-      selectedDevice: deviceId,
-      interfaces: interfaces
-    });
-  } catch (err) {
-    console.error('Route error:', err);
-    res.status(500).send('Internal Server Error');
-  }
-});
 
 // Route for data API
 app.get('/api/data', async (req, res) => {
