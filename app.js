@@ -903,23 +903,57 @@ app.post('/api/devices', (req, res) => {
 });
 
 // API to delete device
-app.delete('/api/devices/:deviceId', (req, res) => {
+app.delete('/api/devices/:deviceId', async (req, res) => {
   try {
     const { deviceId } = req.params;
     if (!snmpDevices[deviceId]) {
       return res.status(404).json({ error: 'Device not found' });
     }
-    
+
+    const device = snmpDevices[deviceId];
+
+    // Clean up database data for this device
+    try {
+      console.log(`[DELETE DEVICE] Starting database cleanup for device: ${deviceId} (${device.name})`);
+
+      // Delete all SNMP metric data for this device from InfluxDB
+      const deleteApi = client.getDeleteApi();
+
+      // Delete data with device tag matching this deviceId
+      await deleteApi.delete(
+        new Date(0), // Start from epoch (beginning of time)
+        new Date(), // End at current time
+        `_measurement="snmp_metric" AND device="${deviceId}"`,
+        settings.influxdb.bucket,
+        settings.influxdb.org
+      );
+
+      console.log(`[DELETE DEVICE] Database cleanup completed for device: ${deviceId}`);
+
+    } catch (dbError) {
+      console.error(`[DELETE DEVICE] Error cleaning up database for device ${deviceId}:`, dbError);
+      // Continue with device deletion even if database cleanup fails
+    }
+
+    // Remove device from memory
     delete snmpDevices[deviceId];
+
+    // Remove from config
     config.snmpDevices = config.snmpDevices.filter(d => d.id !== deviceId);
     saveConfig();
-    
+
     // Close SNMP session
     if (snmpSessions[deviceId]) {
+      snmpSessions[deviceId].close();
       delete snmpSessions[deviceId];
     }
-    
-    res.json({ message: 'Device deleted' });
+
+    console.log(`[DELETE DEVICE] Device deleted successfully: ${deviceId} (${device.name})`);
+    res.json({
+      message: 'Device deleted successfully',
+      deviceId: deviceId,
+      deviceName: device.name
+    });
   } catch (err) {
     console.error('Error deleting device:', err);
     res.status(500).json({ error: 'Internal Server Error' });

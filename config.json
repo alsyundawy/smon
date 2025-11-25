@@ -47,84 +47,8 @@
           "index": 149,
           "name": "IndoBSD-Biznet-pptp"
         }
-      ]
-    },
-    {
-      "id": "disti-ipe",
-      "name": "Distribusi Ipe",
-      "host": "172.16.27.2",
-      "community": "public",
-      "enabled": true,
-      "selectedInterfaces": [
-        {
-          "index": 1,
-          "name": "ether1"
-        },
-        {
-          "index": 2,
-          "name": "ether2"
-        },
-        {
-          "index": 3,
-          "name": "ether3"
-        },
-        {
-          "index": 4,
-          "name": "ether4"
-        },
-        {
-          "index": 6,
-          "name": "ether6"
-        },
-        {
-          "index": 10,
-          "name": "ether10"
-        },
-        {
-          "index": 11,
-          "name": "ether11"
-        },
-        {
-          "index": 12,
-          "name": "ether12"
-        },
-        {
-          "index": 14,
-          "name": "ether14"
-        },
-        {
-          "index": 19,
-          "name": "bridgeLocal01"
-        },
-        {
-          "index": 20,
-          "name": "bridgeLocal02"
-        },
-        {
-          "index": 22,
-          "name": "vlan-202"
-        },
-        {
-          "index": 25,
-          "name": "vlan-203"
-        },
-        {
-          "index": 26,
-          "name": "vlan-204"
-        },
-        {
-          "index": 27,
-          "name": "vlan-10"
-        },
-        {
-          "index": 28,
-          "name": "vlan-10-pub"
-        },
-        {
-          "index": 31,
-          "name": "pppoe-test"
-        }
-      ]
+      ],
+      "vendor": "standard"
     },
     {
       "id": "core-biznet",
@@ -165,7 +89,8 @@
           "index": 14,
           "name": "vlan-253"
         }
-      ]
+      ],
+      "vendor": "standard"
     },
     {
       "id": "core-idc",
@@ -202,7 +127,8 @@
           "index": 18,
           "name": "vlan-3357"
         }
-      ]
+      ],
+      "vendor": "standard"
     },
     {
       "id": "distribusi-biznet-indobsd",
@@ -287,7 +213,8 @@
           "index": 31,
           "name": "vlan-223"
         }
-      ]
+      ],
+      "vendor": "standard"
     },
     {
       "id": "distri-idc3d-indobsd",
@@ -364,7 +291,8 @@
           "index": 37,
           "name": "vlan250-Zetoup"
         }
-      ]
+      ],
+      "vendor": "standard"
     }
   ]
 }
