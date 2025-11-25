@@ -8,16 +8,11 @@
 
 ## ✨ Fitur Utama
 
-### Monitoring & Analytics
-- 🔍 **Real-time Bandwidth Monitoring** - Pantau traffic RX/TX secara real-time dengan grafik interaktif
-- 🎯 **Ping Monitoring** - Monitor konektivitas jaringan dengan:
-  - Latency tracking & packet loss monitoring
-  - Grouped target management
-  - Historical data dengan time range filter (1h, 6h, 24h, 7d, 30d)
-  - Smart notifications (offline, timeout, high latency)
-  - Auto-ping dengan interval yang dapat dikonfigurasi (5-300 detik)
-- 🖥️ **Multi-Device Support** - Monitor multiple network devices simultaneously
-- 📊 **Advanced Analytics** - Visualisasi data dengan Chart.js dan Luxon time adapter
+### Multi-Vendor SNMP Support
+- 🔧 **Vendor Detection** - Auto-detect device vendor (Cisco, Huawei, Mikrotik, Juniper, HP/Aruba)
+- 🎯 **Optimized OIDs** - Use vendor-specific SNMP OIDs for better compatibility and performance
+- 🔄 **Fallback Support** - Automatic fallback to standard MIB-II if vendor-specific OIDs fail
+- 📊 **Vendor Tagging** - Tag metrics with vendor information for better analytics
 
 ### Dashboard & Interface
 - 📱 **Responsive Design** - Akses dari desktop dan mobile device dengan adaptive layout
@@ -46,13 +41,25 @@
   - High latency (threshold configurable 10-500ms)
   - Toast notifications dengan color coding
 
-### Header System Stats
-- 💻 **Real-time System Monitoring** - Header setiap halaman menampilkan:
-  - CPU usage percentage
-  - Memory usage (used/total GB)
-  - Database status (online/offline)
-  - Storage disk usage (used/total GB)
-  - Auto-refresh setiap 10 detik
+### Supported Network Vendors
+
+SMon mendukung berbagai vendor perangkat jaringan dengan optimasi SNMP OID khusus:
+
+| Vendor | Auto-Detection | Optimized OIDs | Notes |
+|--------|----------------|----------------|-------|
+| **Cisco** | ✅ sysDescr contains "Cisco" | High-capacity counters (64-bit) | Supports IOS, NX-OS, IOS-XR |
+| **Huawei** | ✅ sysDescr contains "Huawei" | Huawei enterprise MIB | Supports VRP OS |
+| **Mikrotik** | ✅ sysDescr contains "Mikrotik/RouterOS" | Mikrotik enterprise MIB | RouterOS specific counters |
+| **Juniper** | ✅ sysDescr contains "Juniper/Junos" | Juniper enterprise MIB | Junos OS support |
+| **HP/Aruba** | ✅ sysDescr contains "HP/ProCurve/Aruba" | HP enterprise MIB | Comware and ProVision OS |
+| **Standard MIB-II** | Default fallback | RFC 1213 MIB-II | Works with all SNMP devices |
+
+### Vendor-Specific Features
+- **Cisco**: Uses 64-bit counters (ifHCInOctets/ifHCOutOctets) for high-speed interfaces
+- **Huawei**: Optimized for Huawei's VRP operating system
+- **Mikrotik**: RouterOS specific interface counters
+- **Juniper**: Junos OS enterprise MIB support
+- **HP/Aruba**: ProVision and Comware OS compatibility
 
 ## 🚀 Quick Start
 
@@ -183,21 +190,51 @@ graphts/
 
 ## ⚙️ Configuration
 
-### SNMP Devices Configuration (`config.json`)
+### Device Vendor Configuration
 
 ```json
 {
   "snmpDevices": [
     {
-      "id": "core-router",
-      "name": "Core Router",
+      "id": "cisco-router",
+      "name": "Cisco Core Router",
       "host": "192.168.1.1",
       "community": "public",
+      "vendor": "cisco",
       "enabled": true,
       "selectedInterfaces": [
         {
           "index": 1,
-          "name": "ether1"
+          "name": "GigabitEthernet0/0"
+        }
+      ]
+    },
+    {
+      "id": "huawei-switch",
+      "name": "Huawei Access Switch",
+      "host": "192.168.1.10",
+      "community": "public",
+      "vendor": "huawei",
+      "enabled": true,
+      "selectedInterfaces": [
+        {
+          "index": 2,
+          "name": "GE0/0/1"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Vendor Field Options:**
+- `"auto"` or omit field: Auto-detect vendor from sysDescr
+- `"standard"`: Force standard MIB-II (RFC 1213)
+- `"cisco"`: Cisco-specific optimizations
+- `"huawei"`: Huawei VRP optimizations
+- `"mikrotik"`: Mikrotik RouterOS optimizations
+- `"juniper"`: Juniper Junos optimizations
+- `"hp"`: HP/Aruba ProVision optimizations
         }
       ]
     }

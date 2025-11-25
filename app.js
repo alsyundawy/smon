@@ -9,6 +9,132 @@ const os = require('os');
 const app = express();
 const port = 3000;
 
+// Vendor OID mappings for different network device vendors
+const VENDOR_OIDS = {
+  // Standard MIB-II (works on most devices)
+  standard: {
+    ifDescr: '1.3.6.1.2.1.2.2.1.2',      // Interface description
+    ifInOctets: '1.3.6.1.2.1.2.2.1.10',  // Inbound octets
+    ifOutOctets: '1.3.6.1.2.1.2.2.1.16', // Outbound octets
+    sysDescr: '1.3.6.1.2.1.1.1.0'         // System description
+  },
+  // Cisco specific OIDs
+  cisco: {
+    ifDescr: '1.3.6.1.2.1.2.2.1.2',
+    ifInOctets: '1.3.6.1.2.1.2.2.1.10',
+    ifOutOctets: '1.3.6.1.2.1.2.2.1.16',
+    sysDescr: '1.3.6.1.2.1.1.1.0',
+    // Cisco specific counters (64-bit)
+    ifHCInOctets: '1.3.6.1.2.1.31.1.1.1.6',  // High capacity in octets
+    ifHCOutOctets: '1.3.6.1.2.1.31.1.1.1.10' // High capacity out octets
+  },
+  // Huawei specific OIDs
+  huawei: {
+    ifDescr: '1.3.6.1.2.1.2.2.1.2',
+    ifInOctets: '1.3.6.1.2.1.2.2.1.10',
+    ifOutOctets: '1.3.6.1.2.1.2.2.1.16',
+    sysDescr: '1.3.6.1.2.1.1.1.0',
+    // Huawei specific counters
+    hwIfInOctets: '1.3.6.1.4.1.2011.5.25.31.1.1.3.1.6',  // Huawei interface in octets
+    hwIfOutOctets: '1.3.6.1.4.1.2011.5.25.31.1.1.3.1.10' // Huawei interface out octets
+  },
+  // Mikrotik specific OIDs
+  mikrotik: {
+    ifDescr: '1.3.6.1.2.1.2.2.1.2',
+    ifInOctets: '1.3.6.1.2.1.2.2.1.10',
+    ifOutOctets: '1.3.6.1.2.1.2.2.1.16',
+    sysDescr: '1.3.6.1.2.1.1.1.0',
+    // Mikrotik specific counters
+    mtxrIfInOctets: '1.3.6.1.4.1.14988.1.1.14.1.1.6',  // Mikrotik interface in octets
+    mtxrIfOutOctets: '1.3.6.1.4.1.14988.1.1.14.1.1.10' // Mikrotik interface out octets
+  },
+  // Juniper specific OIDs
+  juniper: {
+    ifDescr: '1.3.6.1.2.1.2.2.1.2',
+    ifInOctets: '1.3.6.1.2.1.2.2.1.10',
+    ifOutOctets: '1.3.6.1.2.1.2.2.1.16',
+    sysDescr: '1.3.6.1.2.1.1.1.0',
+    // Juniper specific counters
+    jnxIfInOctets: '1.3.6.1.4.1.2636.3.3.1.1.7',  // Juniper interface in octets
+    jnxIfOutOctets: '1.3.6.1.4.1.2636.3.3.1.1.11' // Juniper interface out octets
+  },
+  // HP/Aruba specific OIDs
+  hp: {
+    ifDescr: '1.3.6.1.2.1.2.2.1.2',
+    ifInOctets: '1.3.6.1.2.1.2.2.1.10',
+    ifOutOctets: '1.3.6.1.2.1.2.2.1.16',
+    sysDescr: '1.3.6.1.2.1.1.1.0',
+    // HP specific counters
+    hpIfInOctets: '1.3.6.1.4.1.11.2.14.11.5.1.9.6.1.6',  // HP interface in octets
+    hpIfOutOctets: '1.3.6.1.4.1.11.2.14.11.5.1.9.6.1.10' // HP interface out octets
+  }
+};
+
+// Function to detect device vendor based on sysDescr
+function detectVendor(sysDescr) {
+  const descr = sysDescr.toLowerCase();
+  
+  if (descr.includes('cisco')) return 'cisco';
+  if (descr.includes('huawei')) return 'huawei';
+  if (descr.includes('mikrotik') || descr.includes('routeros')) return 'mikrotik';
+  if (descr.includes('juniper') || descr.includes('junos')) return 'juniper';
+  if (descr.includes('hp') || descr.includes('aruba') || descr.includes('procurve')) return 'hp';
+  
+  return 'standard'; // Default to standard MIB-II
+}
+
+// Function to get appropriate OID for vendor and metric
+function getVendorOID(vendor, metric) {
+  const vendorConfig = VENDOR_OIDS[vendor] || VENDOR_OIDS.standard;
+  return vendorConfig[metric] || VENDOR_OIDS.standard[metric];
+}
+
+// Function to process RX data
+function processRxData(deviceId, device, iface, rxValue) {
+  try {
+    const writeApi = client.getWriteApi(settings.influxdb.org, settings.influxdb.bucket);
+    const rxPoint = new Point('snmp_metric')
+      .tag('device', deviceId)
+      .tag('device_name', device.name)
+      .tag('interface', iface.name)
+      .tag('direction', 'rx')
+      .tag('vendor', device.vendor || 'standard')
+      .timestamp(new Date())
+      .floatField('value', rxValue);
+    writeApi.writePoint(rxPoint);
+    writeApi.close().then(() => {
+      console.log(`[${deviceId}] RX data written for ${iface.name}`);
+    }).catch(err => {
+      console.error('InfluxDB RX write error:', err);
+    });
+  } catch (err) {
+    console.error('Error creating RX write API:', err);
+  }
+}
+
+// Function to process TX data
+function processTxData(deviceId, device, iface, txValue) {
+  try {
+    const writeApi = client.getWriteApi(settings.influxdb.org, settings.influxdb.bucket);
+    const txPoint = new Point('snmp_metric')
+      .tag('device', deviceId)
+      .tag('device_name', device.name)
+      .tag('interface', iface.name)
+      .tag('direction', 'tx')
+      .tag('vendor', device.vendor || 'standard')
+      .timestamp(new Date())
+      .floatField('value', txValue);
+    writeApi.writePoint(txPoint);
+    writeApi.close().then(() => {
+      console.log(`[${deviceId}] TX data written for ${iface.name}`);
+    }).catch(err => {
+      console.error('InfluxDB TX write error:', err);
+    });
+  } catch (err) {
+    console.error('Error creating TX write API:', err);
+  }
+}
+
 // Load SNMP devices config
 const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
 const snmpSessions = {}; // Map of device sessions
@@ -17,12 +143,16 @@ const snmpDevices = {}; // Map of device config
 // Initialize SNMP sessions for enabled devices
 config.snmpDevices.forEach(device => {
   if (device.enabled) {
+    // Auto-detect vendor if not specified
+    if (!device.vendor) {
+      device.vendor = 'standard'; // Will be updated during first discovery
+    }
     snmpDevices[device.id] = device;
     snmpSessions[device.id] = snmp.createSession(device.host, device.community, {
       timeout: 1000,
       retries: 0
     });
-    console.log(`SNMP Session initialized for device: ${device.name} (${device.host})`);
+    console.log(`SNMP Session initialized for device: ${device.name} (${device.host}) - Vendor: ${device.vendor}`);
   }
 });
 
@@ -669,18 +799,36 @@ app.post('/api/discover-interfaces', (req, res) => {
       retries: 0
     });
 
+    let vendor = 'standard';
     const interfaces = [];
     let completed = false;
+    let sysDescrRetrieved = false;
+
     const timeout = setTimeout(() => {
       if (!completed) {
         completed = true;
         tempSession.close();
-        console.log(`[DISCOVER] SNMP walk timeout, found ${interfaces.length} interfaces`);
-        res.json({ interfaces });
+        console.log(`[DISCOVER] SNMP walk timeout, found ${interfaces.length} interfaces for ${vendor} device`);
+        res.json({ interfaces, vendor });
       }
     }, 5000); // 5 second timeout for discovery
 
-    tempSession.walk('1.3.6.1.2.1.2.2.1.2', 30, function(varbinds) {
+    // First, get system description to detect vendor
+    tempSession.get(['1.3.6.1.2.1.1.1.0'], function(error, varbinds) {
+      if (!error && varbinds && varbinds[0] && !snmp.isVarbindError(varbinds[0])) {
+        const sysDescr = varbinds[0].value.toString();
+        vendor = detectVendor(sysDescr);
+        console.log(`[DISCOVER] Detected vendor: ${vendor} for device ${host}`);
+      } else {
+        console.log(`[DISCOVER] Could not detect vendor for ${host}, using standard MIB-II`);
+      }
+      sysDescrRetrieved = true;
+    });
+
+    // Use appropriate OID for interface discovery based on vendor
+    const ifDescrOid = getVendorOID(vendor, 'ifDescr');
+
+    tempSession.walk(ifDescrOid, 30, function(varbinds) {
       varbinds.forEach(vb => {
         if (snmp.isVarbindError(vb)) {
           // Skip errors
@@ -704,8 +852,8 @@ app.post('/api/discover-interfaces', (req, res) => {
         completed = true;
         clearTimeout(timeout);
         tempSession.close();
-        console.log(`[DISCOVER] SNMP walk completed, found ${interfaces.length} interfaces`);
-        res.json({ interfaces });
+        console.log(`[DISCOVER] SNMP walk completed, found ${interfaces.length} interfaces for ${vendor} device`);
+        res.json({ interfaces, vendor });
       }
     });
   } catch (err) {
@@ -717,7 +865,7 @@ app.post('/api/discover-interfaces', (req, res) => {
 // API to add device
 app.post('/api/devices', (req, res) => {
   try {
-    const { id, name, host, community, selectedInterfaces } = req.body;
+    const { id, name, host, community, selectedInterfaces, vendor } = req.body;
     if (!id || !name || !host || !community) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -731,6 +879,7 @@ app.post('/api/devices', (req, res) => {
       name,
       host,
       community,
+      vendor: vendor || 'standard', // Default to standard if not specified
       enabled: true,
       selectedInterfaces: selectedInterfaces || []
     };
@@ -745,6 +894,7 @@ app.post('/api/devices', (req, res) => {
       retries: 0
     });
     
+    console.log(`Device added: ${name} (${host}) - Vendor: ${newDevice.vendor}`);
     res.json(newDevice);
   } catch (err) {
     console.error('Error adding device:', err);
@@ -832,9 +982,19 @@ app.get('/api/devices/:deviceId/interfaces', (req, res) => {
       return res.status(404).json({ error: 'Device not found' });
     }
     
-    getInterfaces(deviceId, (interfaces) => {
-      res.json(interfaces);
+    const device = snmpDevices[deviceId];
+    // Handle both old format (array of strings) and new format (array of {index, name})
+    const interfaces = (device.selectedInterfaces || []).map((iface, idx) => {
+      if (typeof iface === 'string') {
+        // Old format: just interface name, use position as index (fallback)
+        return { index: idx + 1, name: iface };
+      } else {
+        // New format: {index, name}
+        return { index: iface.index, name: iface.name };
+      }
     });
+    
+    res.json(interfaces);
   } catch (err) {
     console.error('Error getting interfaces:', err);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -986,34 +1146,6 @@ app.get('/api/data', async (req, res) => {
 });
 
 // Get interfaces from config.json (no SNMP walk needed)
-function getInterfaces(deviceId, callback) {
-  try {
-    if (!snmpDevices[deviceId]) {
-      console.error('Device not found:', deviceId);
-      callback([]);
-      return;
-    }
-
-    const device = snmpDevices[deviceId];
-    // Handle both old format (array of strings) and new format (array of {index, name})
-    const interfaces = (device.selectedInterfaces || []).map((iface, idx) => {
-      if (typeof iface === 'string') {
-        // Old format: just interface name, use position as index (fallback)
-        return { index: idx + 1, name: iface };
-      } else {
-        // New format: {index, name}
-        return { index: iface.index, name: iface.name };
-      }
-    });
-
-    console.log(`[${deviceId}] Retrieved ${interfaces.length} interfaces from config`);
-    callback(interfaces);
-  } catch (err) {
-    console.error('getInterfaces error:', err);
-    callback([]);
-  }
-}
-
 // SNMP polling function for all devices
 function pollSNMP() {
   console.log('[POLLING] Function called');
@@ -1029,77 +1161,63 @@ function pollSNMP() {
       return;
     }
     
-    getInterfaces(deviceId, (allInterfaces) => {
-      // Get selected interface names (support both old and new format)
-      const selectedNames = device.selectedInterfaces.map(iface => 
-        typeof iface === 'string' ? iface : iface.name
-      );
+    console.log(`[${deviceId}] Retrieved ${device.selectedInterfaces.length} interfaces from config`);
+    
+    // Use selected interfaces directly
+    const ifacesToPoll = device.selectedInterfaces.map(iface => ({
+      index: typeof iface === 'string' ? iface : iface.index,
+      name: typeof iface === 'string' ? iface : iface.name
+    }));
+    
+    ifacesToPoll.forEach(iface => {
+      const vendor = device.vendor || 'standard';
       
-      // Only poll selected interfaces
-      const ifacesToPoll = allInterfaces.filter(iface => selectedNames.includes(iface.name));
+      // Get appropriate OIDs for this vendor
+      const rxOid = `${getVendorOID(vendor, 'ifInOctets')}.${iface.index}`; // RX
+      const txOid = `${getVendorOID(vendor, 'ifOutOctets')}.${iface.index}`; // TX
       
-      ifacesToPoll.forEach(iface => {
-        // Query both RX (inbound) and TX (outbound) traffic
-        const rxOid = `1.3.6.1.2.1.2.2.1.10.${iface.index}`; // ifInOctets - RX
-        const txOid = `1.3.6.1.2.1.2.2.1.16.${iface.index}`; // ifOutOctets - TX
-        
-        // Query RX traffic
-        snmpSessions[deviceId].get([rxOid], function(rxError, rxVarbinds) {
-          if (rxError) {
-            console.error(`[${deviceId}] SNMP RX error for interface ${iface.name}:`, rxError);
-          } else if (snmp.isVarbindError(rxVarbinds[0])) {
-            console.error(`[${deviceId}] SNMP RX varbind error for ${iface.name}:`, snmp.varbindError(rxVarbinds[0]));
-          } else {
-            const rxValue = rxVarbinds[0].value;
-            try {
-              const writeApi = client.getWriteApi(settings.influxdb.org, settings.influxdb.bucket);
-              const rxPoint = new Point('snmp_metric')
-                .tag('device', deviceId)
-                .tag('device_name', device.name)
-                .tag('interface', iface.name)
-                .tag('direction', 'rx')
-                .timestamp(new Date())
-                .floatField('value', rxValue);
-              writeApi.writePoint(rxPoint);
-              writeApi.close().then(() => {
-                console.log(`[${deviceId}] RX data written for ${iface.name}`);
-              }).catch(err => {
-                console.error('InfluxDB RX write error:', err);
-              });
-            } catch (err) {
-              console.error('Error creating RX write API:', err);
-            }
+      console.log(`[${deviceId}] Using ${vendor} OIDs - RX: ${rxOid}, TX: ${txOid}`);
+      
+      // Query RX traffic
+      snmpSessions[deviceId].get([rxOid], function(rxError, rxVarbinds) {
+        if (rxError) {
+          console.error(`[${deviceId}] SNMP RX error for interface ${iface.name}:`, rxError);
+          // Try fallback to standard MIB-II if vendor-specific OID fails
+          if (vendor !== 'standard') {
+            const fallbackRxOid = `1.3.6.1.2.1.2.2.1.10.${iface.index}`;
+            snmpSessions[deviceId].get([fallbackRxOid], function(fallbackError, fallbackVarbinds) {
+              if (!fallbackError && fallbackVarbinds && !snmp.isVarbindError(fallbackVarbinds[0])) {
+                console.log(`[${deviceId}] RX fallback successful for ${iface.name}`);
+                processRxData(deviceId, device, iface, fallbackVarbinds[0].value);
+              }
+            });
           }
-        });
-        
-        // Query TX traffic
-        snmpSessions[deviceId].get([txOid], function(txError, txVarbinds) {
-          if (txError) {
-            console.error(`[${deviceId}] SNMP TX error for interface ${iface.name}:`, txError);
-          } else if (snmp.isVarbindError(txVarbinds[0])) {
-            console.error(`[${deviceId}] SNMP TX varbind error for ${iface.name}:`, snmp.varbindError(txVarbinds[0]));
-          } else {
-            const txValue = txVarbinds[0].value;
-            try {
-              const writeApi = client.getWriteApi(settings.influxdb.org, settings.influxdb.bucket);
-              const txPoint = new Point('snmp_metric')
-                .tag('device', deviceId)
-                .tag('device_name', device.name)
-                .tag('interface', iface.name)
-                .tag('direction', 'tx')
-                .timestamp(new Date())
-                .floatField('value', txValue);
-              writeApi.writePoint(txPoint);
-              writeApi.close().then(() => {
-                console.log(`[${deviceId}] TX data written for ${iface.name}`);
-              }).catch(err => {
-                console.error('InfluxDB TX write error:', err);
-              });
-            } catch (err) {
-              console.error('Error creating TX write API:', err);
-            }
+        } else if (snmp.isVarbindError(rxVarbinds[0])) {
+          console.error(`[${deviceId}] SNMP RX varbind error for ${iface.name}:`, snmp.varbindError(rxVarbinds[0]));
+        } else {
+          processRxData(deviceId, device, iface, rxVarbinds[0].value);
+        }
+      });
+      
+      // Query TX traffic
+      snmpSessions[deviceId].get([txOid], function(txError, txVarbinds) {
+        if (txError) {
+          console.error(`[${deviceId}] SNMP TX error for interface ${iface.name}:`, txError);
+          // Try fallback to standard MIB-II if vendor-specific OID fails
+          if (vendor !== 'standard') {
+            const fallbackTxOid = `1.3.6.1.2.1.2.2.1.16.${iface.index}`;
+            snmpSessions[deviceId].get([fallbackTxOid], function(fallbackError, fallbackVarbinds) {
+              if (!fallbackError && fallbackVarbinds && !snmp.isVarbindError(fallbackVarbinds[0])) {
+                console.log(`[${deviceId}] TX fallback successful for ${iface.name}`);
+                processTxData(deviceId, device, iface, fallbackVarbinds[0].value);
+              }
+            });
           }
-        });
+        } else if (snmp.isVarbindError(txVarbinds[0])) {
+          console.error(`[${deviceId}] SNMP TX varbind error for ${iface.name}:`, snmp.varbindError(txVarbinds[0]));
+        } else {
+          processTxData(deviceId, device, iface, txVarbinds[0].value);
+        }
       });
     });
   });
