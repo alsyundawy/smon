@@ -94,31 +94,39 @@
           
           <!-- System Stats -->
           <div class="flex flex-wrap gap-3 text-xs">
-            <div class="flex items-center gap-2 bg-slate-800 px-3 py-2 rounded-lg border border-slate-700">
-              <i class="fas fa-microchip text-blue-400"></i>
+            <div class="flex items-center gap-2 bg-gradient-to-br from-slate-800 to-slate-900 px-3 py-2 rounded-lg border border-slate-700/50 hover:border-blue-500/30 transition-all duration-200">
+              <div class="w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <i class="fas fa-microchip text-white text-xs"></i>
+              </div>
               <div>
-                <p class="text-gray-400">CPU</p>
+                <p class="text-gray-400 font-medium">CPU</p>
                 <p class="text-white font-semibold" id="header-cpu">--%</p>
               </div>
             </div>
-            <div class="flex items-center gap-2 bg-slate-800 px-3 py-2 rounded-lg border border-slate-700">
-              <i class="fas fa-memory text-green-400"></i>
+            <div class="flex items-center gap-2 bg-gradient-to-br from-slate-800 to-slate-900 px-3 py-2 rounded-lg border border-slate-700/50 hover:border-green-500/30 transition-all duration-200">
+              <div class="w-6 h-6 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                <i class="fas fa-memory text-white text-xs"></i>
+              </div>
               <div>
-                <p class="text-gray-400">Memory</p>
+                <p class="text-gray-400 font-medium">Memory</p>
                 <p class="text-white font-semibold" id="header-memory">--</p>
               </div>
             </div>
-            <div class="flex items-center gap-2 bg-slate-800 px-3 py-2 rounded-lg border border-slate-700">
-              <i class="fas fa-database text-purple-400"></i>
+            <div class="flex items-center gap-2 bg-gradient-to-br from-slate-800 to-slate-900 px-3 py-2 rounded-lg border border-slate-700/50 hover:border-purple-500/30 transition-all duration-200">
+              <div class="w-6 h-6 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <i class="fas fa-database text-white text-xs"></i>
+              </div>
               <div>
-                <p class="text-gray-400">Database</p>
+                <p class="text-gray-400 font-medium">Database</p>
                 <p class="text-green-400 font-semibold" id="header-db"><i class="fas fa-circle text-xs"></i> Online</p>
               </div>
             </div>
-            <div class="flex items-center gap-2 bg-slate-800 px-3 py-2 rounded-lg border border-slate-700">
-              <i class="fas fa-hdd text-orange-400"></i>
+            <div class="flex items-center gap-2 bg-gradient-to-br from-slate-800 to-slate-900 px-3 py-2 rounded-lg border border-slate-700/50 hover:border-orange-500/30 transition-all duration-200">
+              <div class="w-6 h-6 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                <i class="fas fa-hdd text-white text-xs"></i>
+              </div>
               <div>
-                <p class="text-gray-400">Storage</p>
+                <p class="text-gray-400 font-medium">Storage</p>
                 <p class="text-white font-semibold" id="header-storage">--</p>
               </div>
             </div>
@@ -129,14 +137,17 @@
       <!-- Content -->
       <div class="p-8">
         <!-- Filter Controls -->
-        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 mb-8 shadow-lg">
+        <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700/50 p-6 mb-8 shadow-xl hover:shadow-2xl transition-all duration-300">
           <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
             <!-- Device Selector -->
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">
-                <i class="fas fa-server mr-2 text-blue-400"></i>Select Device
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-gray-300 flex items-center gap-2">
+                <div class="p-1 bg-gradient-to-br from-blue-500 to-blue-600 rounded">
+                  <i class="fas fa-server text-white text-xs"></i>
+                </div>
+                Select Device
               </label>
-              <select id="device-selector" class="w-full bg-slate-700 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <select id="device-selector" class="w-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600/50 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-500/70">
                 <option value="">Choose a device...</option>
                 <% Object.entries(devices).forEach(([key, device]) => { %>
                   <option value="<%= key %>" <%= key === selectedDevice ? 'selected' : '' %>>
@@ -147,21 +158,27 @@
             </div>
 
             <!-- Interface Selector -->
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">
-                <i class="fas fa-network-wired mr-2 text-green-400"></i>Select Interface
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-gray-300 flex items-center gap-2">
+                <div class="p-1 bg-gradient-to-br from-green-500 to-green-600 rounded">
+                  <i class="fas fa-network-wired text-white text-xs"></i>
+                </div>
+                Select Interface
               </label>
-              <select id="interface-selector" class="w-full bg-slate-700 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <select id="interface-selector" class="w-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600/50 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 hover:border-slate-500/70">
                 <option value="all">All Selected Interfaces</option>
               </select>
             </div>
 
             <!-- Time Range Selector -->
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">
-                <i class="fas fa-calendar-alt mr-2 text-purple-400"></i>Time Range
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-gray-300 flex items-center gap-2">
+                <div class="p-1 bg-gradient-to-br from-purple-500 to-purple-600 rounded">
+                  <i class="fas fa-calendar-alt text-white text-xs"></i>
+                </div>
+                Time Range
               </label>
-              <select id="time-range-selector" class="w-full bg-slate-700 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <select id="time-range-selector" class="w-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600/50 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 hover:border-slate-500/70">
                 <option value="-1h" selected>Last 1 Hour</option>
                 <option value="-24h">Last 24 Hours</option>
                 <option value="-7d">Last 7 Days</option>
@@ -171,36 +188,54 @@
             </div>
 
             <!-- Action Buttons -->
-            <div class="flex items-end gap-2">
-              <button onclick="loadChartData()" class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2">
-                <i class="fas fa-sync-alt"></i>
-                <span>Load Data</span>
-              </button>
-              <button onclick="generatePDFReport()" class="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2">
-                <i class="fas fa-file-pdf"></i>
-                <span>PDF Report</span>
-              </button>
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-gray-300 opacity-0">Actions</label>
+              <div class="flex items-end gap-3">
+                <button onclick="loadChartData()" class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-blue-500/25 hover:-translate-y-0.5">
+                  <i class="fas fa-sync-alt"></i>
+                  <span>Load Data</span>
+                </button>
+                <button onclick="generatePDFReport()" class="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-purple-500/25 hover:-translate-y-0.5">
+                  <i class="fas fa-file-pdf"></i>
+                  <span>PDF Report</span>
+                </button>
+              </div>
             </div>
           </div>
 
           <!-- Custom Date Range (Hidden by default) -->
-          <div id="custom-date-from" class="hidden mt-6 pt-6 border-t border-slate-700">
-            <label class="block text-sm font-medium text-gray-300 mb-2">From Date:</label>
-            <input type="datetime-local" id="date-from-input" class="w-full bg-slate-700 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <div id="custom-date-from" class="hidden mt-6 pt-6 border-t border-slate-600/50">
+            <label class="block text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
+              <i class="fas fa-calendar-plus text-blue-400"></i>
+              From Date:
+            </label>
+            <input type="datetime-local" id="date-from-input" class="w-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600/50 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-500/70">
           </div>
 
           <div id="custom-date-to" class="hidden mt-4">
-            <label class="block text-sm font-medium text-gray-300 mb-2">To Date:</label>
-            <input type="datetime-local" id="date-to-input" class="w-full bg-slate-700 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <label class="block text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
+              <i class="fas fa-calendar-check text-blue-400"></i>
+              To Date:
+            </label>
+            <input type="datetime-local" id="date-to-input" class="w-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600/50 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-500/70">
           </div>
         </div>
 
         <!-- Charts Container -->
         <div id="charts-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Charts will be loaded here -->
-          <div class="col-span-full text-center py-12 text-gray-400">
-            <i class="fas fa-chart-line text-4xl mb-4 opacity-50"></i>
-            <p>Select device and click "Load Data" to display bandwidth charts</p>
+          <div class="col-span-full">
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700/50 p-12 shadow-xl text-center hover:shadow-2xl transition-all duration-300">
+              <div class="w-20 h-20 bg-gradient-to-br from-gray-600 to-gray-700 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <i class="fas fa-chart-line text-gray-400 text-3xl"></i>
+              </div>
+              <h3 class="text-xl font-semibold text-white mb-2">No Data Loaded</h3>
+              <p class="text-gray-400 text-lg mb-6">Select a device and click "Load Data" to display bandwidth charts</p>
+              <div class="flex items-center justify-center gap-2 text-sm text-gray-500">
+                <i class="fas fa-lightbulb text-yellow-400"></i>
+                <span>Choose your device and interface to start monitoring</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -369,14 +404,22 @@
       
       // Create RX card
       const cardRx = document.createElement('div');
-      cardRx.className = 'bg-slate-800 rounded-lg border border-slate-700 p-6 shadow-lg';
+      cardRx.className = 'bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700/50 p-6 shadow-xl hover:shadow-2xl transition-all duration-300';
       cardRx.innerHTML = `
-        <div class="mb-4">
-          <h3 class="text-lg font-bold text-white flex items-center gap-2">
-            <i class="fas fa-arrow-down text-green-400"></i>
-            ${interfaceName} - RX (Download)
-          </h3>
-          <p class="text-xs text-gray-400 mt-1">Incoming Bandwidth (Mbps)</p>
+        <div class="mb-6">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg">
+              <i class="fas fa-arrow-down text-white"></i>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-white">${interfaceName} - RX</h3>
+              <p class="text-xs text-gray-400">Incoming Bandwidth</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 text-sm">
+            <span class="text-gray-400">Download Traffic</span>
+            <span class="text-green-400 font-semibold">(Mbps)</span>
+          </div>
         </div>
         <div class="relative" style="height: 280px;">
           <canvas id="${chartIdRx}"></canvas>
@@ -386,14 +429,22 @@
       
       // Create TX card
       const cardTx = document.createElement('div');
-      cardTx.className = 'bg-slate-800 rounded-lg border border-slate-700 p-6 shadow-lg';
+      cardTx.className = 'bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700/50 p-6 shadow-xl hover:shadow-2xl transition-all duration-300';
       cardTx.innerHTML = `
-        <div class="mb-4">
-          <h3 class="text-lg font-bold text-white flex items-center gap-2">
-            <i class="fas fa-arrow-up text-amber-400"></i>
-            ${interfaceName} - TX (Upload)
-          </h3>
-          <p class="text-xs text-gray-400 mt-1">Outgoing Bandwidth (Mbps)</p>
+        <div class="mb-6">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="p-2 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg shadow-lg">
+              <i class="fas fa-arrow-up text-white"></i>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-white">${interfaceName} - TX</h3>
+              <p class="text-xs text-gray-400">Outgoing Bandwidth</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 text-sm">
+            <span class="text-gray-400">Upload Traffic</span>
+            <span class="text-amber-400 font-semibold">(Mbps)</span>
+          </div>
         </div>
         <div class="relative" style="height: 280px;">
           <canvas id="${chartIdTx}"></canvas>
