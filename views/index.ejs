@@ -126,97 +126,148 @@
       <div class="p-8">
         <!-- Quick Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div class="bg-slate-800 rounded-lg p-6 border border-slate-700 hover:border-slate-600 transition-all">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-gray-400 text-sm font-medium">Active Devices</p>
-                <p class="text-3xl font-bold text-white mt-2"><%= Object.values(devices).filter(d => d.enabled).length %></p>
+          <!-- Active Devices Card -->
+          <div class="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700/50 hover:border-blue-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-1">
+            <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="relative z-10">
+              <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg">
+                  <i class="fas fa-server text-white text-xl"></i>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs text-blue-400 font-medium uppercase tracking-wider">Active</p>
+                  <p class="text-xs text-gray-400">Devices</p>
+                </div>
               </div>
-              <i class="fas fa-server text-blue-500 text-4xl opacity-30"></i>
+              <div class="space-y-1">
+                <p class="text-3xl font-bold text-white"><%= Object.values(devices).filter(d => d.enabled).length %></p>
+                <p class="text-sm text-gray-400 font-medium">Monitored Devices</p>
+              </div>
             </div>
           </div>
 
-          <div class="bg-slate-800 rounded-lg p-6 border border-slate-700 hover:border-slate-600 transition-all">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-gray-400 text-sm font-medium">Total Interfaces</p>
-                <p class="text-3xl font-bold text-white mt-2"><%= interfaces.length %></p>
+          <!-- Total Interfaces Card -->
+          <div class="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700/50 hover:border-green-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/10 hover:-translate-y-1">
+            <div class="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="relative z-10">
+              <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg">
+                  <i class="fas fa-network-wired text-white text-xl"></i>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs text-green-400 font-medium uppercase tracking-wider">Total</p>
+                  <p class="text-xs text-gray-400">Interfaces</p>
+                </div>
               </div>
-              <i class="fas fa-network-wired text-green-500 text-4xl opacity-30"></i>
+              <div class="space-y-1">
+                <p class="text-3xl font-bold text-white"><%= interfaces.length %></p>
+                <p class="text-sm text-gray-400 font-medium">Network Interfaces</p>
+              </div>
             </div>
           </div>
 
-          <div class="bg-slate-800 rounded-lg p-6 border border-slate-700 hover:border-slate-600 transition-all">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-gray-400 text-sm font-medium">Ping Targets</p>
-                <p class="text-3xl font-bold text-white mt-2"><%= pingTargets.length %></p>
+          <!-- Ping Targets Card -->
+          <div class="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700/50 hover:border-yellow-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-yellow-500/10 hover:-translate-y-1">
+            <div class="absolute inset-0 bg-gradient-to-br from-yellow-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="relative z-10">
+              <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg shadow-lg">
+                  <i class="fas fa-bullseye text-white text-xl"></i>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs text-yellow-400 font-medium uppercase tracking-wider">Active</p>
+                  <p class="text-xs text-gray-400">Targets</p>
+                </div>
               </div>
-              <i class="fas fa-bullseye text-yellow-500 text-4xl opacity-30"></i>
+              <div class="space-y-1">
+                <p class="text-3xl font-bold text-white"><%= pingTargets.length %></p>
+                <p class="text-sm text-gray-400 font-medium">Ping Monitoring</p>
+              </div>
             </div>
           </div>
 
-          <div class="bg-slate-800 rounded-lg p-6 border border-slate-700 hover:border-slate-600 transition-all">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-gray-400 text-sm font-medium">Status</p>
-                <p class="text-3xl font-bold text-green-400 mt-2">Operational</p>
+          <!-- System Status Card -->
+          <div class="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-slate-700/50 hover:border-emerald-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1">
+            <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="relative z-10">
+              <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg shadow-lg">
+                  <i class="fas fa-check-circle text-white text-xl"></i>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs text-emerald-400 font-medium uppercase tracking-wider">System</p>
+                  <p class="text-xs text-gray-400">Status</p>
+                </div>
               </div>
-              <i class="fas fa-check-circle text-green-500 text-4xl opacity-30"></i>
+              <div class="space-y-1">
+                <p class="text-3xl font-bold text-emerald-400">Operational</p>
+                <p class="text-sm text-gray-400 font-medium">All Systems Go</p>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Ping Targets Overview -->
-        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 shadow-lg mb-8">
+        <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700/50 p-6 shadow-xl mb-8 hover:shadow-2xl transition-all duration-300">
           <div class="flex justify-between items-center mb-6">
-            <h3 class="text-lg font-bold text-white flex items-center gap-2">
-              <i class="fas fa-network-wired text-yellow-500"></i>
+            <h3 class="text-lg font-bold text-white flex items-center gap-3">
+              <div class="p-2 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg shadow-lg">
+                <i class="fas fa-network-wired text-white"></i>
+              </div>
               Ping Monitoring Status
             </h3>
-            <a href="/ping" class="text-sm text-blue-400 hover:text-blue-300 transition-colors">
-              View Details <i class="fas fa-arrow-right ml-1"></i>
+            <a href="/ping" class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/25">
+              View Details
+              <i class="fas fa-arrow-right"></i>
             </a>
           </div>
           
           <% if (pingTargets.length === 0) { %>
-            <div class="text-center py-8 text-gray-400">
-              <i class="fas fa-network-wired text-5xl mb-4 opacity-20"></i>
-              <p class="text-sm">No ping targets configured yet.</p>
-              <a href="/ping" class="inline-block mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-all">
-                <i class="fas fa-plus mr-2"></i>Add Ping Target
+            <div class="text-center py-12">
+              <div class="w-16 h-16 bg-gradient-to-br from-gray-600 to-gray-700 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <i class="fas fa-network-wired text-gray-400 text-2xl"></i>
+              </div>
+              <p class="text-gray-400 text-lg font-medium mb-2">No ping targets configured yet.</p>
+              <p class="text-gray-500 text-sm mb-6">Start monitoring your network connectivity</p>
+              <a href="/ping" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/25">
+                <i class="fas fa-plus"></i>
+                Add Ping Target
               </a>
             </div>
           <% } else { %>
             <!-- Ping Targets by Group -->
-            <div class="space-y-4">
+            <div class="space-y-6">
               <% Object.entries(groupedPingTargets).forEach(([group, targets]) => { %>
-                <div class="bg-slate-700 rounded-lg p-4">
-                  <h4 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                    <i class="fas fa-folder text-blue-400"></i>
+                <div class="bg-gradient-to-r from-slate-700/50 to-slate-800/50 rounded-lg p-5 border border-slate-600/30">
+                  <h4 class="text-base font-semibold text-white mb-4 flex items-center gap-3">
+                    <div class="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md">
+                      <i class="fas fa-folder text-white text-sm"></i>
+                    </div>
                     <%= group %>
-                    <span class="text-xs text-gray-400 font-normal">(<%= targets.length %> targets)</span>
+                    <span class="text-xs text-gray-400 font-normal bg-slate-800 px-2 py-1 rounded-full border border-slate-600">
+                      <%= targets.length %> targets
+                    </span>
                   </h4>
-                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     <% targets.forEach(target => { %>
-                      <div class="bg-slate-800 rounded-lg p-3 border border-slate-600 ping-target-card" data-target-id="<%= target.id %>">
-                        <div class="flex items-start justify-between mb-2">
-                          <div class="flex-1">
-                            <p class="font-medium text-white text-sm"><%= target.name %></p>
-                            <p class="text-xs text-gray-400 mt-1"><%= target.host %></p>
+                      <div class="group bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg p-4 border border-slate-600/50 hover:border-slate-500/70 transition-all duration-200 hover:shadow-lg hover:shadow-slate-900/50 ping-target-card" data-target-id="<%= target.id %>">
+                        <div class="flex items-start justify-between mb-3">
+                          <div class="flex-1 min-w-0">
+                            <p class="font-semibold text-white text-sm truncate"><%= target.name %></p>
+                            <p class="text-xs text-gray-400 mt-1 truncate"><%= target.host %></p>
                           </div>
-                          <div class="status-indicator ml-2">
-                            <i class="fas fa-circle-notch fa-spin text-gray-400 text-xs"></i>
+                          <div class="status-indicator ml-2 flex-shrink-0">
+                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
                           </div>
                         </div>
-                        <div class="flex items-center justify-between mt-3 pt-2 border-t border-slate-600">
+                        <div class="flex items-center justify-between pt-3 border-t border-slate-600/50">
                           <div class="text-xs">
                             <span class="text-gray-400">Latency:</span>
-                            <span class="latency text-white font-medium ml-1">--</span>
+                            <span class="latency text-white font-semibold ml-1">--ms</span>
                           </div>
                           <div class="text-xs">
                             <span class="text-gray-400">Loss:</span>
-                            <span class="packet-loss text-white font-medium ml-1">--</span>
+                            <span class="packet-loss text-white font-semibold ml-1">--%</span>
                           </div>
                         </div>
                       </div>
@@ -233,22 +284,47 @@
           <!-- Devices Overview -->
           <div class="lg:col-span-2">
             <!-- Device Cards -->
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 shadow-lg mb-8">
-              <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                <i class="fas fa-server text-blue-500"></i>
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700/50 p-6 shadow-xl mb-8 hover:shadow-2xl transition-all duration-300">
+              <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-3">
+                <div class="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg">
+                  <i class="fas fa-server text-white"></i>
+                </div>
                 Monitored Devices
               </h3>
               
-              <div class="space-y-3">
+              <div class="space-y-4">
                 <% Object.entries(devices).forEach(([deviceId, device]) => { %>
-                  <a href="/monitoring?device=<%= deviceId %>" class="flex items-center justify-between p-4 bg-slate-700 hover:bg-slate-600 rounded-lg transition-all duration-200 cursor-pointer">
-                    <div>
-                      <p class="font-medium text-white"><%= device.name %></p>
-                      <p class="text-sm text-gray-400"><%= device.host %> • <%= device.selectedInterfaces ? device.selectedInterfaces.length : 0 %> interfaces selected</p>
-                    </div>
-                    <div class="text-right">
-                      <p class="text-xs text-green-400 mb-1"><i class="fas fa-circle text-green-500 mr-1"></i>Online</p>
-                      <i class="fas fa-arrow-right text-gray-400 text-lg"></i>
+                  <a href="/monitoring?device=<%= deviceId %>" class="group block p-4 bg-gradient-to-r from-slate-700/50 to-slate-800/50 hover:from-slate-600 hover:to-slate-700 rounded-lg border border-slate-600/30 hover:border-slate-500/50 transition-all duration-200 hover:shadow-lg hover:shadow-slate-900/30 hover:-translate-y-0.5">
+                    <div class="flex items-center justify-between">
+                      <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-2">
+                          <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md">
+                            <i class="fas fa-server text-white text-sm"></i>
+                          </div>
+                          <div>
+                            <p class="font-semibold text-white group-hover:text-blue-400 transition-colors"><%= device.name %></p>
+                            <p class="text-sm text-gray-400"><%= device.host %></p>
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-4 text-xs text-gray-400">
+                          <span class="flex items-center gap-1">
+                            <i class="fas fa-network-wired text-green-400"></i>
+                            <%= device.selectedInterfaces ? device.selectedInterfaces.length : 0 %> interfaces
+                          </span>
+                          <span class="flex items-center gap-1">
+                            <i class="fas fa-circle text-green-500"></i>
+                            Online
+                          </span>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-3">
+                        <div class="text-right">
+                          <p class="text-xs text-gray-400">View Details</p>
+                        </div>
+                        <div class="w-8 h-8 bg-slate-600 group-hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors">
+                          <i class="fas fa-arrow-right text-gray-400 group-hover:text-white text-sm"></i>
+                        </div>
+                      </div>
                     </div>
                   </a>
                 <% }); %>
@@ -256,9 +332,11 @@
             </div>
 
             <!-- Selected Interfaces by Device -->
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 shadow-lg">
-              <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                <i class="fas fa-network-wired text-green-500"></i>
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700/50 p-6 shadow-xl hover:shadow-2xl transition-all duration-300">
+              <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-3">
+                <div class="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg">
+                  <i class="fas fa-network-wired text-white"></i>
+                </div>
                 Selected Interfaces
               </h3>
               
@@ -268,22 +346,35 @@
                   Object.entries(devices).forEach(([deviceId, device]) => { 
                     totalInterfaces += (device.selectedInterfaces ? device.selectedInterfaces.length : 0);
                 %>
-                  <div class="pb-6 border-b border-slate-700 last:border-b-0 last:pb-0">
-                    <p class="font-medium text-white mb-3 text-sm"><%= device.name %> <span class="text-xs text-gray-400">(<%= device.selectedInterfaces ? device.selectedInterfaces.length : 0 %>)</span></p>
-                    <div class="flex flex-wrap gap-2">
+                  <div class="pb-6 border-b border-slate-700/50 last:border-b-0 last:pb-0">
+                    <div class="flex items-center gap-3 mb-4">
+                      <div class="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center shadow-md">
+                        <i class="fas fa-server text-white text-xs"></i>
+                      </div>
+                      <div>
+                        <p class="font-semibold text-white"><%= device.name %></p>
+                        <p class="text-xs text-gray-400"><%= device.selectedInterfaces ? device.selectedInterfaces.length : 0 %> interfaces selected</p>
+                      </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2 ml-11">
                       <% if (device.selectedInterfaces && device.selectedInterfaces.length > 0) { %>
                         <% device.selectedInterfaces.slice(0, 8).forEach(iface => { %>
-                          <span class="px-3 py-1 bg-slate-700 rounded-full text-xs text-gray-300 border border-slate-600">
-                            <i class="fas fa-check-circle text-green-400 mr-1"></i><%= typeof iface === 'string' ? iface : iface.name %>
+                          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-green-500/10 to-green-600/10 hover:from-green-500/20 hover:to-green-600/20 text-green-400 rounded-full text-xs font-medium border border-green-500/20 hover:border-green-500/30 transition-all duration-200">
+                            <i class="fas fa-check-circle text-green-400 text-xs"></i>
+                            <%= typeof iface === 'string' ? iface : iface.name %>
                           </span>
                         <% }); %>
                         <% if (device.selectedInterfaces.length > 8) { %>
-                          <span class="px-3 py-1 bg-slate-700 rounded-full text-xs text-gray-400 border border-slate-600">
-                            +<%= device.selectedInterfaces.length - 8 %> more
+                          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-slate-600/50 to-slate-700/50 text-gray-400 rounded-full text-xs font-medium border border-slate-600/30">
+                            <i class="fas fa-plus text-xs"></i>
+                            <%= device.selectedInterfaces.length - 8 %> more
                           </span>
                         <% } %>
                       <% } else { %>
-                        <span class="px-3 py-1 bg-slate-700 rounded-full text-xs text-gray-400 italic border border-slate-600">No interfaces</span>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-gray-500/10 to-gray-600/10 text-gray-400 rounded-full text-xs font-medium italic border border-gray-500/20">
+                          <i class="fas fa-exclamation-triangle text-xs"></i>
+                          No interfaces selected
+                        </span>
                       <% } %>
                     </div>
                   </div>
@@ -295,105 +386,177 @@
           <!-- Sidebar Info -->
           <div class="space-y-6">
             <!-- System Informations -->
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 shadow-lg">
-              <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <i class="fas fa-info-circle text-blue-500"></i>
-                System Informations
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700/50 p-6 shadow-xl hover:shadow-2xl transition-all duration-300">
+              <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-3">
+                <div class="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg">
+                  <i class="fas fa-info-circle text-white"></i>
+                </div>
+                System Information
               </h3>
-              <div class="space-y-4 text-sm">
+              <div class="space-y-5 text-sm">
                 <!-- System Name -->
-                <div>
-                  <p class="text-gray-400">System Name</p>
-                  <p class="font-medium text-white">SNMP Monitor</p>
+                <div class="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg border border-slate-600/30">
+                  <div>
+                    <p class="text-gray-400 text-xs font-medium uppercase tracking-wider">System Name</p>
+                    <p class="font-semibold text-white mt-1">SNMP Monitor</p>
+                  </div>
+                  <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-desktop text-white text-xs"></i>
+                  </div>
                 </div>
 
                 <!-- Version -->
-                <div class="border-t border-slate-700 pt-3">
-                  <p class="text-gray-400">Version</p>
-                  <p class="font-medium text-white">v2.0</p>
+                <div class="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg border border-slate-600/30">
+                  <div>
+                    <p class="text-gray-400 text-xs font-medium uppercase tracking-wider">Version</p>
+                    <p class="font-semibold text-white mt-1">v2.0</p>
+                  </div>
+                  <div class="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-code-branch text-white text-xs"></i>
+                  </div>
                 </div>
 
                 <!-- Node.js Version -->
-                <div class="border-t border-slate-700 pt-3">
-                  <p class="text-gray-400">Node.js Version</p>
-                  <p class="font-medium text-white" id="node-version">Loading...</p>
+                <div class="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg border border-slate-600/30">
+                  <div>
+                    <p class="text-gray-400 text-xs font-medium uppercase tracking-wider">Node.js</p>
+                    <p class="font-semibold text-white mt-1" id="node-version">Loading...</p>
+                  </div>
+                  <div class="w-8 h-8 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center">
+                    <i class="fab fa-node-js text-white text-xs"></i>
+                  </div>
                 </div>
 
                 <!-- Platform -->
-                <div class="border-t border-slate-700 pt-3">
-                  <p class="text-gray-400">Platform</p>
-                  <p class="font-medium text-white" id="platform">Loading...</p>
+                <div class="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg border border-slate-600/30">
+                  <div>
+                    <p class="text-gray-400 text-xs font-medium uppercase tracking-wider">Platform</p>
+                    <p class="font-semibold text-white mt-1" id="platform">Loading...</p>
+                  </div>
+                  <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-microchip text-white text-xs"></i>
+                  </div>
                 </div>
 
                 <!-- Memory Usage -->
-                <div class="border-t border-slate-700 pt-3">
-                  <p class="text-gray-400">Memory Usage</p>
-                  <div class="mt-2">
-                    <div class="flex justify-between text-xs text-gray-400 mb-1">
+                <div class="p-3 bg-slate-700/30 rounded-lg border border-slate-600/30">
+                  <div class="flex items-center justify-between mb-3">
+                    <p class="text-gray-400 text-xs font-medium uppercase tracking-wider">Memory Usage</p>
+                    <div class="w-8 h-8 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center">
+                      <i class="fas fa-memory text-white text-xs"></i>
+                    </div>
+                  </div>
+                  <div class="space-y-2">
+                    <div class="flex justify-between text-xs text-gray-400">
                       <span id="memory-used">0 MB</span>
                       <span id="memory-total">0 MB</span>
                     </div>
-                    <div class="w-full bg-slate-700 rounded-full h-2">
-                      <div class="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300" id="memory-bar" style="width: 0%"></div>
+                    <div class="w-full bg-slate-600 rounded-full h-2 overflow-hidden">
+                      <div class="bg-gradient-to-r from-cyan-500 to-cyan-600 h-2 rounded-full transition-all duration-500 ease-out" id="memory-bar" style="width: 0%"></div>
                     </div>
                   </div>
                 </div>
 
                 <!-- CPU Usage -->
-                <div class="border-t border-slate-700 pt-3">
-                  <p class="text-gray-400">CPU Usage</p>
-                  <div class="mt-2">
-                    <div class="flex justify-between text-xs text-gray-400 mb-1">
+                <div class="p-3 bg-slate-700/30 rounded-lg border border-slate-600/30">
+                  <div class="flex items-center justify-between mb-3">
+                    <p class="text-gray-400 text-xs font-medium uppercase tracking-wider">CPU Usage</p>
+                    <div class="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                      <i class="fas fa-microchip text-white text-xs"></i>
+                    </div>
+                  </div>
+                  <div class="space-y-2">
+                    <div class="flex justify-between text-xs text-gray-400">
                       <span id="cpu-usage">0%</span>
                       <span id="cpu-cores">0 cores</span>
                     </div>
-                    <div class="w-full bg-slate-700 rounded-full h-2">
-                      <div class="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-300" id="cpu-bar" style="width: 0%"></div>
+                    <div class="w-full bg-slate-600 rounded-full h-2 overflow-hidden">
+                      <div class="bg-gradient-to-r from-emerald-500 to-emerald-600 h-2 rounded-full transition-all duration-500 ease-out" id="cpu-bar" style="width: 0%"></div>
                     </div>
                   </div>
                 </div>
 
                 <!-- System Uptime -->
-                <div class="border-t border-slate-700 pt-3">
-                  <p class="text-gray-400">System Uptime</p>
-                  <p class="font-medium text-white" id="system-uptime">Loading...</p>
+                <div class="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg border border-slate-600/30">
+                  <div>
+                    <p class="text-gray-400 text-xs font-medium uppercase tracking-wider">System Uptime</p>
+                    <p class="font-semibold text-white mt-1" id="system-uptime">Loading...</p>
+                  </div>
+                  <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-clock text-white text-xs"></i>
+                  </div>
                 </div>
 
                 <!-- Database Status -->
-                <div class="border-t border-slate-700 pt-3">
-                  <p class="text-gray-400">Database Status</p>
-                  <p class="font-medium text-green-400"><i class="fas fa-circle text-green-500 mr-2"></i>Connected</p>
+                <div class="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg border border-slate-600/30">
+                  <div>
+                    <p class="text-gray-400 text-xs font-medium uppercase tracking-wider">Database</p>
+                    <p class="font-semibold text-green-400 mt-1 flex items-center gap-2">
+                      <i class="fas fa-circle text-green-500 text-xs"></i>
+                      Connected
+                    </p>
+                  </div>
+                  <div class="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-database text-white text-xs"></i>
+                  </div>
                 </div>
 
                 <!-- Status -->
-                <div class="border-t border-slate-700 pt-3">
-                  <p class="text-gray-400">Monitoring Status</p>
-                  <p class="font-medium text-green-400"><i class="fas fa-circle text-green-500 mr-2"></i>Operational</p>
+                <div class="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg border border-slate-600/30">
+                  <div>
+                    <p class="text-gray-400 text-xs font-medium uppercase tracking-wider">Monitoring</p>
+                    <p class="font-semibold text-green-400 mt-1 flex items-center gap-2">
+                      <i class="fas fa-circle text-green-500 text-xs"></i>
+                      Operational
+                    </p>
+                  </div>
+                  <div class="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-check-circle text-white text-xs"></i>
+                  </div>
                 </div>
 
                 <!-- Last Updated -->
-                <div class="border-t border-slate-700 pt-3">
-                  <p class="text-gray-400">Last Updated</p>
-                  <p class="font-medium text-white text-xs" id="last-update">-</p>
+                <div class="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg border border-slate-600/30">
+                  <div>
+                    <p class="text-gray-400 text-xs font-medium uppercase tracking-wider">Last Updated</p>
+                    <p class="font-semibold text-white mt-1 text-xs" id="last-update">-</p>
+                  </div>
+                  <div class="w-8 h-8 bg-gradient-to-br from-gray-500 to-gray-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-sync text-white text-xs"></i>
+                  </div>
                 </div>
               </div>
             </div>
 
             <!-- Quick Actions -->
-            <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 shadow-lg">
-              <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <i class="fas fa-bolt text-yellow-500"></i>
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700/50 p-6 shadow-xl hover:shadow-2xl transition-all duration-300">
+              <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-3">
+                <div class="p-2 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg shadow-lg">
+                  <i class="fas fa-bolt text-white"></i>
+                </div>
                 Quick Actions
               </h3>
-              <div class="space-y-2">
-                <a href="/monitoring" class="block w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg text-center text-sm font-medium transition-all duration-200">
-                  <i class="fas fa-chart-line mr-2"></i>View Bandwidth
+              <div class="space-y-3">
+                <a href="/monitoring" class="group flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/25 hover:-translate-y-0.5">
+                  <span class="flex items-center gap-3">
+                    <i class="fas fa-chart-line"></i>
+                    View Bandwidth
+                  </span>
+                  <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
                 </a>
-                <a href="/devices" class="block w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-center text-sm transition-all">
-                  <i class="fas fa-edit mr-2"></i>Manage Devices
+                <a href="/devices" class="group flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white rounded-lg font-medium transition-all duration-200 hover:shadow-lg hover:shadow-slate-900/25 hover:-translate-y-0.5">
+                  <span class="flex items-center gap-3">
+                    <i class="fas fa-edit"></i>
+                    Manage Devices
+                  </span>
+                  <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
                 </a>
-                <a href="/settings" class="block w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-center text-sm transition-all">
-                  <i class="fas fa-cog mr-2"></i>Settings
+                <a href="/settings" class="group flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white rounded-lg font-medium transition-all duration-200 hover:shadow-lg hover:shadow-slate-900/25 hover:-translate-y-0.5">
+                  <span class="flex items-center gap-3">
+                    <i class="fas fa-cog"></i>
+                    Settings
+                  </span>
+                  <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
                 </a>
               </div>
             </div>
