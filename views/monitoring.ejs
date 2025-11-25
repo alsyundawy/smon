@@ -447,7 +447,9 @@
               callbacks: {
                 label: function(context) {
                   const value = context.parsed.y;
-                  if (value >= 1) {
+                  if (value >= 1000) {
+                    return 'RX: ' + (value / 1000).toFixed(2) + ' Gbps';
+                  } else if (value >= 1) {
                     return 'RX: ' + value.toFixed(2) + ' Mbps';
                   } else if (value >= 0.001) {
                     return 'RX: ' + (value * 1000).toFixed(2) + ' Kbps';
@@ -499,7 +501,9 @@
               ticks: {
                 color: '#94a3b8',
                 callback: function(value) {
-                  if (value >= 1) {
+                  if (value >= 1000) {
+                    return (value / 1000).toFixed(1) + ' Gbps';
+                  } else if (value >= 1) {
                     return value.toFixed(1) + ' Mbps';
                   } else if (value >= 0.001) {
                     return (value * 1000).toFixed(1) + ' Kbps';
@@ -557,7 +561,9 @@
               callbacks: {
                 label: function(context) {
                   const value = context.parsed.y;
-                  if (value >= 1) {
+                  if (value >= 1000) {
+                    return 'TX: ' + (value / 1000).toFixed(2) + ' Gbps';
+                  } else if (value >= 1) {
                     return 'TX: ' + value.toFixed(2) + ' Mbps';
                   } else if (value >= 0.001) {
                     return 'TX: ' + (value * 1000).toFixed(2) + ' Kbps';
@@ -609,7 +615,9 @@
               ticks: {
                 color: '#94a3b8',
                 callback: function(value) {
-                  if (value >= 1) {
+                  if (value >= 1000) {
+                    return (value / 1000).toFixed(1) + ' Gbps';
+                  } else if (value >= 1) {
                     return value.toFixed(1) + ' Mbps';
                   } else if (value >= 0.001) {
                     return (value * 1000).toFixed(1) + ' Kbps';
@@ -1028,15 +1036,37 @@
       if (rxValues.length > 0) {
         const maxRx = Math.max(...rxValues);
         const avgRx = rxValues.reduce((a, b) => a + b, 0) / rxValues.length;
-        stats.peakRx = maxRx.toFixed(2);
-        stats.avgRx = avgRx.toFixed(2);
+        
+        // Format with appropriate unit
+        if (maxRx >= 1000) {
+          stats.peakRx = (maxRx / 1000).toFixed(2) + ' Gbps';
+        } else {
+          stats.peakRx = maxRx.toFixed(2) + ' Mbps';
+        }
+        
+        if (avgRx >= 1000) {
+          stats.avgRx = (avgRx / 1000).toFixed(2) + ' Gbps';
+        } else {
+          stats.avgRx = avgRx.toFixed(2) + ' Mbps';
+        }
       }
 
       if (txValues.length > 0) {
         const maxTx = Math.max(...txValues);
         const avgTx = txValues.reduce((a, b) => a + b, 0) / txValues.length;
-        stats.peakTx = maxTx.toFixed(2);
-        stats.avgTx = avgTx.toFixed(2);
+        
+        // Format with appropriate unit
+        if (maxTx >= 1000) {
+          stats.peakTx = (maxTx / 1000).toFixed(2) + ' Gbps';
+        } else {
+          stats.peakTx = maxTx.toFixed(2) + ' Mbps';
+        }
+        
+        if (avgTx >= 1000) {
+          stats.avgTx = (avgTx / 1000).toFixed(2) + ' Gbps';
+        } else {
+          stats.avgTx = avgTx.toFixed(2) + ' Mbps';
+        }
       }
 
       return stats;
