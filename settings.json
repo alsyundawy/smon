@@ -1,7 +1,7 @@
 {
   "pollingInterval": 300000,
   "pingInterval": 60000,
-  "dataRetention": 365,
+  "dataRetention": 730,
   "influxdb": {
     "url": "http://localhost:8086",
     "org": "indobsd",
