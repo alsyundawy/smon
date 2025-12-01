@@ -40,21 +40,27 @@
             </div>
             <div>
               <h3 class="text-lg font-semibold text-white">Ping Monitoring</h3>
-          <a href="/websites" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-slate-700 transition-all duration-200">
-            <i class="fas fa-globe w-5"></i>
-            <span>Website Monitor</span>
-          </a>
               <p class="text-gray-400 text-sm">Latency, packet loss tracking with smart notifications</p>
             </div>
           </div>
 
           <div class="flex items-center gap-4">
-            <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
-              <i class="fas fa-server text-green-400 text-xl"></i>
+            <div class="w-12 h-12 bg-indigo-500/20 rounded-lg flex items-center justify-center">
+              <i class="fas fa-globe text-indigo-400 text-xl"></i>
             </div>
             <div>
-              <h3 class="text-lg font-semibold text-white">Multi-Device Support</h3>
-              <p class="text-gray-400 text-sm">Monitor multiple network devices with grouped targets</p>
+              <h3 class="text-lg font-semibold text-white">Website Monitoring</h3>
+              <p class="text-gray-400 text-sm">Monitor website availability, SSL certificates, and response times</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center">
+              <i class="fas fa-at text-orange-400 text-xl"></i>
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-white">Domain Monitoring</h3>
+              <p class="text-gray-400 text-sm">Track domain expiration dates and renewal status</p>
             </div>
           </div>
 
@@ -85,6 +91,16 @@
             <div>
               <h3 class="text-lg font-semibold text-white">System Stats</h3>
               <p class="text-gray-400 text-sm">Real-time CPU, Memory, Storage & Database monitoring</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-indigo-500/20 rounded-lg flex items-center justify-center">
+              <i class="fas fa-globe text-indigo-400 text-xl"></i>
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-white">Website Monitoring</h3>
+              <p class="text-gray-400 text-sm">Monitor website availability, SSL certificates, and response times</p>
             </div>
           </div>
         </div>
@@ -126,6 +142,25 @@
           </div>
           <h1 class="text-2xl font-bold text-white">SMon</h1>
           <p class="text-gray-400">SNMP Monitoring Dashboard</p>
+        </div>
+
+        <!-- Website Monitoring Status -->
+        <div id="website-status-card" class="bg-slate-800/50 rounded-xl border border-slate-700/50 shadow-lg p-4 mb-6 hidden">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 bg-indigo-500/20 rounded-lg flex items-center justify-center">
+                <i class="fas fa-globe text-indigo-400"></i>
+              </div>
+              <div>
+                <p class="text-white text-sm font-medium">Website Monitoring</p>
+                <p id="website-status-text" class="text-gray-400 text-xs">Loading...</p>
+              </div>
+            </div>
+            <div id="website-status-indicator" class="flex items-center gap-2">
+              <div class="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></div>
+              <span class="text-gray-400 text-xs">Checking</span>
+            </div>
+          </div>
         </div>
 
         <!-- Login Form -->
@@ -309,6 +344,71 @@
       if (errorMsg) errorMsg.style.display = 'none';
       if (successMsg) successMsg.style.display = 'none';
     }, 5000);
+
+    // Load website monitoring status
+    async function loadWebsiteStatus() {
+      try {
+        const response = await fetch('/api/website-targets');
+        const targets = await response.json();
+
+        if (targets.length === 0) {
+          return; // Don't show card if no targets configured
+        }
+
+        const statusCard = document.getElementById('website-status-card');
+        const statusText = document.getElementById('website-status-text');
+        const statusIndicator = document.getElementById('website-status-indicator');
+
+        // Load latest status for each target
+        const statusPromises = targets.map(async (target) => {
+          try {
+            const historyResponse = await fetch(`/api/website-history/${target.id}`);
+            const historyData = await historyResponse.json();
+
+            if (historyData.data && historyData.data.length > 0) {
+              const latest = historyData.data[historyData.data.length - 1];
+              return { ...target, latest };
+            }
+            return { ...target, latest: null };
+          } catch (error) {
+            return { ...target, latest: null };
+          }
+        });
+
+        const targetsWithStatus = await Promise.all(statusPromises);
+
+        const upCount = targetsWithStatus.filter(t => t.latest && t.latest.up).length;
+        const totalCount = targetsWithStatus.length;
+
+        statusCard.classList.remove('hidden');
+
+        if (upCount === totalCount) {
+          statusText.textContent = `${upCount}/${totalCount} websites online`;
+          statusIndicator.innerHTML = `
+            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span class="text-green-400 text-xs">All Up</span>
+          `;
+        } else if (upCount > 0) {
+          statusText.textContent = `${upCount}/${totalCount} websites online`;
+          statusIndicator.innerHTML = `
+            <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
+            <span class="text-yellow-400 text-xs">Partial</span>
+          `;
+        } else {
+          statusText.textContent = `${upCount}/${totalCount} websites online`;
+          statusIndicator.innerHTML = `
+            <div class="w-2 h-2 bg-red-500 rounded-full"></div>
+            <span class="text-red-400 text-xs">Down</span>
+          `;
+        }
+      } catch (error) {
+        console.error('Error loading website status:', error);
+        // Keep card hidden if there's an error
+      }
+    }
+
+    // Load website status on page load
+    loadWebsiteStatus();
 
     // Form validation
     document.querySelector('form').addEventListener('submit', function(e) {

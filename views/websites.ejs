@@ -54,6 +54,10 @@
                         <i class="fas fa-globe w-5 group-hover:scale-110 transition-transform duration-200"></i>
                         <span>Website Monitor</span>
                     </a>
+                    <a href="/domains" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-800 hover:text-white transition-all duration-300 hover:shadow-lg hover:scale-[1.02] group">
+                        <i class="fas fa-at w-5 group-hover:scale-110 transition-transform duration-200"></i>
+                        <span>Domain Monitor</span>
+                    </a>
                     <a href="/devices" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-800 hover:text-white transition-all duration-300 hover:shadow-lg hover:scale-[1.02] group">
                         <i class="fas fa-server w-5 group-hover:scale-110 transition-transform duration-200"></i>
                         <span>Devices</span>
@@ -95,6 +99,10 @@
                         <h2 class="text-3xl font-bold text-white flex items-center gap-3">
                             <i class="fas fa-globe text-green-400"></i>
                             Website Monitoring
+                            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+                                <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                                Online
+                            </span>
                         </h2>
                         <p class="text-gray-400 text-sm mt-1">Monitor website availability and SSL certificates</p>
                     </div>
@@ -134,9 +142,6 @@
                                                 </h4>
                                             </div>
                                             <div class="flex items-center gap-2">
-                                                <button class="test-btn text-blue-400 hover:text-blue-300 transition-colors p-1" data-target-id="<%= target.id %>">
-                                                    <i class="fas fa-play text-sm"></i>
-                                                </button>
                                                 <button class="toggle-btn text-yellow-400 hover:text-yellow-300 transition-colors p-1" data-target-id="<%= target.id %>">
                                                     <i class="fas fa-<%= target.enabled ? 'pause' : 'play' %> text-sm"></i>
                                                 </button>
@@ -149,10 +154,10 @@
                                             <i class="fas fa-link text-xs mr-1"></i>
                                             <%= target.url %>
                                         </div>
-                                        <div class="flex justify-between items-center text-xs">
+                                        <div class="flex justify-between items-center text-xs mb-1">
                                             <span class="text-gray-500" id="response-time-<%= target.id %>">Response: --ms</span>
-                                            <span class="text-gray-500" id="ssl-status-<%= target.id %>">SSL: --</span>
                                         </div>
+                                        <div class="text-xs text-gray-500 truncate" id="ssl-status-<%= target.id %>">SSL: --</div>
                                     </div>
                                 <% }); %>
                             </div>
@@ -296,9 +301,31 @@
                 const response = await fetch('/api/website-targets');
                 const targets = await response.json();
 
-                targets.forEach(target => {
-                    updateTargetStatus(target.id, null);
-                });
+                // Load latest status for each target
+                for (const target of targets) {
+                    try {
+                        const historyResponse = await fetch(`/api/website-history/${target.id}`);
+                        const historyData = await historyResponse.json();
+                        
+                        if (historyData.data && historyData.data.length > 0) {
+                            // Get the latest data (last item in sorted array)
+                            const latestData = historyData.data[historyData.data.length - 1];
+                            updateTargetStatus(target.id, {
+                                up: latestData.up,
+                                responseTime: latestData.response_time,
+                                statusCode: latestData.status_code,
+                                sslExpiry: latestData.ssl_expiry,
+                                sslValid: latestData.ssl_valid,
+                                sslIssuer: latestData.ssl_issuer
+                            });
+                        } else {
+                            updateTargetStatus(target.id, null);
+                        }
+                    } catch (error) {
+                        console.error(`Error loading status for target ${target.id}:`, error);
+                        updateTargetStatus(target.id, null);
+                    }
+                }
             } catch (error) {
                 console.error('Error loading website targets:', error);
             }
@@ -320,29 +347,35 @@
             if (data.up) {
                 statusElement.className = 'w-3 h-3 rounded-full bg-green-500';
                 responseTimeElement.textContent = `Response: ${data.responseTime}ms`;
-                sslStatusElement.textContent = data.sslValid ? 'SSL: Valid' : 'SSL: Invalid';
+                
+                // Display SSL information
+                if (data.sslExpiry && data.sslValid !== undefined) {
+                    const expiryDate = new Date(data.sslExpiry);
+                    const daysUntilExpiry = Math.ceil((data.sslExpiry - Date.now()) / (1000 * 60 * 60 * 24));
+                    const expiryFormatted = expiryDate.toLocaleDateString('id-ID', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                    });
+                    
+                    let sslText = data.sslValid ? `SSL: Valid (${expiryFormatted})` : 'SSL: Invalid';
+                    
+                    if (data.sslValid && daysUntilExpiry <= 30) {
+                        sslText += ` - ${daysUntilExpiry}d left`;
+                    }
+                    
+                    if (data.sslIssuer) {
+                        sslText += ` - ${data.sslIssuer}`;
+                    }
+                    
+                    sslStatusElement.textContent = sslText;
+                } else {
+                    sslStatusElement.textContent = 'SSL: --';
+                }
             } else {
                 statusElement.className = 'w-3 h-3 rounded-full bg-red-500';
                 responseTimeElement.textContent = 'Response: --ms';
                 sslStatusElement.textContent = 'SSL: --';
-            }
-        }
-
-        // Test website
-        async function testWebsite(targetId) {
-            try {
-                const response = await fetch('/api/website-test', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ targetId })
-                });
-                const result = await response.json();
-                updateTargetStatus(targetId, result);
-                return result;
-            } catch (error) {
-                console.error('Error testing website:', error);
             }
         }
 
@@ -452,11 +485,6 @@
 
         // Delegate events for dynamic elements
         document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('test-btn') || e.target.closest('.test-btn')) {
-                const targetId = e.target.closest('.test-btn').dataset.targetId;
-                testWebsite(parseInt(targetId));
-            }
-
             if (e.target.classList.contains('toggle-btn') || e.target.closest('.toggle-btn')) {
                 const targetId = e.target.closest('.toggle-btn').dataset.targetId;
                 toggleWebsite(parseInt(targetId));
@@ -474,12 +502,17 @@
 
         // Auto-select first target for charts
         setTimeout(() => {
-            const firstTarget = document.querySelector('.test-btn');
+            const firstTarget = document.querySelector('[data-target-id]');
             if (firstTarget) {
                 selectedTargetId = firstTarget.dataset.targetId;
                 loadChartData(selectedTargetId);
             }
         }, 1000);
+
+        // Auto refresh status every 30 seconds
+        setInterval(() => {
+            loadWebsiteTargets();
+        }, 30000);
     </script>
 </body>
 </html>

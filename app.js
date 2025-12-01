@@ -9,9 +9,35 @@ const nodemailer = require('nodemailer');
 const os = require('os');
 const https = require('https');
 const http = require('http');
+const tls = require('tls');
 
 const app = express();
 const port = 3000;
+
+// Function to get SSL certificate information
+function getSSLCertificate(hostname, port = 443) {
+  return new Promise((resolve, reject) => {
+    const socket = tls.connect({
+      host: hostname,
+      port: port,
+      servername: hostname, // SNI
+      rejectUnauthorized: false
+    }, () => {
+      const cert = socket.getPeerCertificate();
+      socket.end();
+      resolve(cert);
+    });
+
+    socket.on('error', (err) => {
+      reject(err);
+    });
+
+    socket.setTimeout(10000, () => {
+      socket.destroy();
+      reject(new Error('SSL certificate check timeout'));
+    });
+  });
+}
 
 // Vendor OID mappings for different network device vendors
 const VENDOR_OIDS = {
@@ -1055,6 +1081,23 @@ if (fs.existsSync(pingTargetsFile)) {
   fs.writeFileSync(pingTargetsFile, JSON.stringify(pingTargets, null, 2));
 }
 
+// Domain monitoring configuration
+let domainTargets = [
+  { id: 1, name: 'example.com', registrar: 'GoDaddy', expiration_date: '2025-12-31T23:59:59Z', auto_renew: true, group: 'Business', enabled: true },
+  { id: 2, name: 'testdomain.org', registrar: 'Namecheap', expiration_date: '2025-06-15T23:59:59Z', auto_renew: false, group: 'Personal', enabled: true }
+];
+
+// Domain status tracking
+let domainStatusHistory = {}; // Track domain status changes
+
+// Load or create domain targets file
+const domainTargetsFile = './domain-targets.json';
+if (fs.existsSync(domainTargetsFile)) {
+  domainTargets = JSON.parse(fs.readFileSync(domainTargetsFile, 'utf8'));
+} else {
+  fs.writeFileSync(domainTargetsFile, JSON.stringify(domainTargets, null, 2));
+}
+
 // Website monitoring configuration
 let websiteTargets = [
   { id: 1, name: 'Google', url: 'https://www.google.com', group: 'Search Engines', enabled: true },
@@ -1328,6 +1371,24 @@ app.get('/ping', (req, res) => {
   });
 });
 
+// Route for domain monitoring page
+app.get('/domains', (req, res) => {
+  // Group domain targets by group
+  const groupedTargets = {};
+  domainTargets.forEach(target => {
+    if (!groupedTargets[target.group]) {
+      groupedTargets[target.group] = [];
+    }
+    groupedTargets[target.group].push(target);
+  });
+
+  res.render('domains', {
+    domainTargets: domainTargets,
+    groupedTargets: groupedTargets,
+    settings: settings
+  });
+});
+
 // Route for website monitoring page
 app.get('/websites', (req, res) => {
   // Group website targets by group
@@ -1435,6 +1496,123 @@ app.patch('/api/ping-targets/:id/toggle', (req, res) => {
   }
 });
 
+// API to get domain targets
+app.get('/api/domain-targets', (req, res) => {
+  res.json(domainTargets);
+});
+
+// API to add domain target
+app.post('/api/domain-targets', (req, res) => {
+  try {
+    const { name, registrar, expiration_date, auto_renew, group } = req.body;
+
+    if (!name || !expiration_date || !group) {
+      return res.status(400).json({ error: 'Name, expiration date, and group are required' });
+    }
+
+    // Check if domain already exists
+    const existingTarget = domainTargets.find(target => target.name === name);
+    if (existingTarget) {
+      return res.status(400).json({ error: 'Domain already exists' });
+    }
+
+    const newTarget = {
+      id: Math.max(...domainTargets.map(t => t.id), 0) + 1,
+      name,
+      registrar: registrar || 'Unknown',
+      expiration_date,
+      auto_renew: auto_renew || false,
+      group,
+      enabled: true,
+      last_checked: new Date().toISOString()
+    };
+
+    domainTargets.push(newTarget);
+    fs.writeFileSync(domainTargetsFile, JSON.stringify(domainTargets, null, 2));
+
+    res.json(newTarget);
+  } catch (error) {
+    console.error('Error adding domain target:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// API to delete domain target
+app.delete('/api/domain-targets/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const index = domainTargets.findIndex(target => target.id === id);
+
+    if (index === -1) {
+      return res.status(404).json({ error: 'Domain target not found' });
+    }
+
+    domainTargets.splice(index, 1);
+    fs.writeFileSync(domainTargetsFile, JSON.stringify(domainTargets, null, 2));
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting domain target:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// API to toggle domain target
+app.patch('/api/domain-targets/:id/toggle', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const target = domainTargets.find(target => target.id === id);
+
+    if (!target) {
+      return res.status(404).json({ error: 'Domain target not found' });
+    }
+
+    target.enabled = !target.enabled;
+    fs.writeFileSync(domainTargetsFile, JSON.stringify(domainTargets, null, 2));
+
+    res.json(target);
+  } catch (error) {
+    console.error('Error toggling domain target:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// API to get domain history
+app.get('/api/domain-history/:id', (req, res) => {
+  try {
+    const targetId = parseInt(req.params.id);
+    const target = domainTargets.find(t => t.id === targetId);
+
+    if (!target) {
+      return res.status(404).json({ error: 'Domain target not found' });
+    }
+
+    // For now, return mock history data
+    // In a real implementation, this would query InfluxDB
+    const history = [];
+    const now = new Date();
+
+    // Generate some sample history data
+    for (let i = 30; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+
+      const daysLeft = Math.ceil((new Date(target.expiration_date) - date) / (1000 * 60 * 60 * 24));
+
+      history.push({
+        time: date.toISOString(),
+        days_left: Math.max(0, daysLeft),
+        status: daysLeft > 30 ? 'active' : daysLeft > 0 ? 'expiring_soon' : 'expired'
+      });
+    }
+
+    res.json({ data: history });
+  } catch (error) {
+    console.error('Error getting domain history:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 // API to get website targets
 app.get('/api/website-targets', (req, res) => {
   res.json(websiteTargets);
@@ -1525,7 +1703,7 @@ app.patch('/api/website-targets/:id/toggle', (req, res) => {
 });
 
 // API to perform website test
-app.post('/api/website-test', (req, res) => {
+app.post('/api/website-test', async (req, res) => {
   const { targetId } = req.body;
 
   if (!targetId) {
@@ -1537,7 +1715,8 @@ app.post('/api/website-test', (req, res) => {
     return res.status(404).json({ error: 'Target not found' });
   }
 
-  checkWebsiteStatus(target).then(result => {
+  try {
+    const result = await checkWebsiteStatus(target);
     addWebsiteToDatabase(target.id, result);
     res.json({
       targetId: target.id,
@@ -1547,12 +1726,13 @@ app.post('/api/website-test', (req, res) => {
       responseTime: result.responseTime,
       statusCode: result.statusCode,
       sslExpiry: result.sslExpiry,
-      sslValid: result.sslValid
+      sslValid: result.sslValid,
+      sslIssuer: result.sslIssuer
     });
-  }).catch(err => {
+  } catch (err) {
     console.error(`[WEBSITE API] Error testing website ${target.name}:`, err);
     res.status(500).json({ error: 'Website test failed' });
-  });
+  }
 });
 
 // API to get website history
@@ -1567,7 +1747,7 @@ app.get('/api/website-history/:targetId', async (req, res) => {
       |> range(start: -30d)
       |> filter(fn: (r) => r._measurement == "website_metric")
       |> filter(fn: (r) => r.target_id == "${targetId}")
-      |> filter(fn: (r) => r._field == "up" or r._field == "response_time" or r._field == "status_code" or r._field == "ssl_expiry" or r._field == "ssl_valid")
+      |> filter(fn: (r) => r._field == "up" or r._field == "response_time" or r._field == "status_code" or r._field == "ssl_expiry" or r._field == "ssl_valid" or r._field == "ssl_issuer")
       |> sort(columns: ["_time"])
     `;
 
@@ -1584,7 +1764,8 @@ app.get('/api/website-history/:targetId', async (req, res) => {
           responseTime: null,
           statusCode: null,
           sslExpiry: null,
-          sslValid: null
+          sslValid: null,
+          sslIssuer: null
         };
       }
       data[time][row._field] = row._value;
@@ -3227,23 +3408,28 @@ function startPingMonitoring() {
 // Start ping monitoring
 setInterval(startPingMonitoring, settings.pingInterval);
 
-// Start website monitoring
-setInterval(startWebsiteMonitoring, settings.website.interval);
+// Start website monitoring (run immediately, then on interval)
+if (settings.website && settings.website.enabled) {
+  startWebsiteMonitoring(); // Run immediately
+  setInterval(startWebsiteMonitoring, settings.website.interval);
+}
 
 // Website monitoring function
-function startWebsiteMonitoring() {
+async function startWebsiteMonitoring() {
   console.log('[WEBSITE] Starting website monitoring for', websiteTargets.length, 'targets');
 
-  websiteTargets.forEach(target => {
-    if (!target.enabled) return;
+  for (const target of websiteTargets) {
+    if (!target.enabled) continue;
 
-    checkWebsiteStatus(target).then(result => {
+    try {
+      const result = await checkWebsiteStatus(target);
       // Check for status changes and send notifications
       const previousStatus = websiteStatusHistory[target.id];
       const isUp = result.up;
       const responseTime = result.responseTime;
       const sslExpiry = result.sslExpiry;
       const sslValid = result.sslValid;
+      const sslIssuer = result.sslIssuer;
 
       // Initialize status history if not exists
       if (!websiteStatusHistory[target.id]) {
@@ -3252,6 +3438,7 @@ function startWebsiteMonitoring() {
           lastResponseTime: responseTime,
           lastSslExpiry: sslExpiry,
           lastSslValid: sslValid,
+          lastSslIssuer: sslIssuer,
           lastCheck: Date.now()
         };
       }
@@ -3282,11 +3469,12 @@ function startWebsiteMonitoring() {
         lastResponseTime: responseTime,
         lastSslExpiry: sslExpiry,
         lastSslValid: sslValid,
+        lastSslIssuer: sslIssuer,
         lastCheck: Date.now()
       };
 
       addWebsiteToDatabase(target.id, result);
-    }).catch(err => {
+    } catch (err) {
       console.error(`[WEBSITE] Error checking ${target.name} (${target.url}):`, err);
 
       // Check for status changes on error
@@ -3302,6 +3490,7 @@ function startWebsiteMonitoring() {
         lastResponseTime: 0,
         lastSslExpiry: null,
         lastSslValid: false,
+        lastSslIssuer: null,
         lastCheck: Date.now()
       };
 
@@ -3311,18 +3500,24 @@ function startWebsiteMonitoring() {
         responseTime: 0,
         sslExpiry: null,
         sslValid: false,
+        sslIssuer: null,
         error: err.message
       });
-    });
-  });
+    }
+  }
+
+  // Schedule next check
+  if (settings.website.enabled) {
+    setTimeout(startWebsiteMonitoring, settings.website.interval * 1000);
+  }
 }
 
 // Function to check website status and SSL certificate
-function checkWebsiteStatus(target) {
-  return new Promise((resolve, reject) => {
-    const url = new URL(target.url);
-    const startTime = Date.now();
+async function checkWebsiteStatus(target) {
+  const url = new URL(target.url);
+  const startTime = Date.now();
 
+  return new Promise((resolve, reject) => {
     const options = {
       hostname: url.hostname,
       port: url.port || (url.protocol === 'https:' ? 443 : 80),
@@ -3332,18 +3527,39 @@ function checkWebsiteStatus(target) {
       rejectUnauthorized: false // Allow self-signed certificates for checking
     };
 
-    const req = (url.protocol === 'https:' ? https : http).request(options, (res) => {
+    const req = (url.protocol === 'https:' ? https : http).request(options, async (res) => {
       const responseTime = Date.now() - startTime;
       let sslExpiry = null;
       let sslValid = false;
+      let sslIssuer = null;
 
       // Check SSL certificate if HTTPS
-      if (url.protocol === 'https:' && res.socket && res.socket.getPeerCertificate) {
+      if (url.protocol === 'https:') {
         try {
-          const cert = res.socket.getPeerCertificate();
+          const cert = await getSSLCertificate(url.hostname, url.port || 443);
+          
           if (cert && cert.valid_to) {
             sslExpiry = new Date(cert.valid_to).getTime();
             sslValid = Date.now() < sslExpiry;
+            
+            // Extract issuer information
+            if (cert.issuer) {
+              // Try different possible issuer fields
+              sslIssuer = cert.issuer.CN || cert.issuer.O || cert.issuer.organizationName;
+              if (!sslIssuer && cert.issuer.subject) {
+                // Some certificates have issuer as a subject-like object
+                sslIssuer = cert.issuer.subject.CN || cert.issuer.subject.O || cert.issuer.subject.organizationName;
+              }
+              if (!sslIssuer && typeof cert.issuer === 'string') {
+                // Fallback: issuer might be a string
+                sslIssuer = cert.issuer;
+              }
+            }
+            
+            // Debug logging (reduced)
+            console.log(`[WEBSITE SSL] ${target.url} - Valid: ${sslValid}, Expiry: ${sslExpiry ? new Date(sslExpiry).toISOString() : 'null'}, Issuer: ${sslIssuer}`);
+          } else {
+            console.log(`[WEBSITE SSL] No valid certificate found for ${target.url}`);
           }
         } catch (sslErr) {
           console.warn(`[WEBSITE] SSL check failed for ${target.url}:`, sslErr.message);
@@ -3355,7 +3571,8 @@ function checkWebsiteStatus(target) {
         responseTime: responseTime,
         statusCode: res.statusCode,
         sslExpiry: sslExpiry,
-        sslValid: sslValid
+        sslValid: sslValid,
+        sslIssuer: sslIssuer
       });
     });
 
@@ -3394,6 +3611,10 @@ function addWebsiteToDatabase(targetId, result) {
 
     if (result.sslValid !== undefined) {
       websitePoint.booleanField('ssl_valid', result.sslValid);
+    }
+
+    if (result.sslIssuer) {
+      websitePoint.stringField('ssl_issuer', result.sslIssuer);
     }
 
     writeApi.writePoint(websitePoint);

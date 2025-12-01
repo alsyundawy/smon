@@ -4,10 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ping Monitoring - SMon</title>
-          <a href="/websites" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-slate-700 transition-all duration-200">
-            <i class="fas fa-globe w-5"></i>
-            <span>Website Monitor</span>
-          </a>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -53,10 +49,14 @@
                     <a href="/ping" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium transition-all hover:shadow-lg hover:shadow-blue-500/25 hover:scale-[1.02] group">
                         <i class="fas fa-network-wired w-5 group-hover:scale-110 transition-transform duration-200"></i>
                         <span>Ping Monitor</span>
-          <a href="/websites" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-slate-700 transition-all duration-200">
-            <i class="fas fa-globe w-5"></i>
-            <span>Website Monitor</span>
-          </a>
+                    <a href="/websites" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-slate-700 transition-all duration-200">
+                        <i class="fas fa-globe w-5"></i>
+                        <span>Website Monitor</span>
+                    </a>
+                    <a href="/domains" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-800 hover:text-white transition-all duration-300 hover:shadow-lg hover:scale-[1.02] group">
+                        <i class="fas fa-at w-5 group-hover:scale-110 transition-transform duration-200"></i>
+                        <span>Domain Monitor</span>
+                    </a>
                     </a>
                     <a href="/devices" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-800 hover:text-white transition-all duration-300 hover:shadow-lg hover:scale-[1.02] group">
                         <i class="fas fa-server w-5 group-hover:scale-110 transition-transform duration-200"></i>
@@ -260,12 +260,12 @@
                                 <div class="flex items-center gap-2">
                                     <label class="text-sm text-gray-400">Time Range:</label>
                                     <select id="timeRangeFilter" class="bg-slate-700 text-white px-3 py-2 rounded-lg text-sm border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                        <option value="1h" selected>Last Hour</option>
-                                        <option value="6h">Last 6 Hours</option>
-                                        <option value="24h">Last 24 Hours</option>
-                                        <option value="7d">Last 7 Days</option>
-                                        <option value="30d">Last 30 Days</option>
-                                        <option value="all">All Time</option>
+                                        <option value="1h" selected style="background-color: rgb(51 65 85); color: white;">Last Hour</option>
+                                        <option value="6h" style="background-color: rgb(51 65 85); color: white;">Last 6 Hours</option>
+                                        <option value="24h" style="background-color: rgb(51 65 85); color: white;">Last 24 Hours</option>
+                                        <option value="7d" style="background-color: rgb(51 65 85); color: white;">Last 7 Days</option>
+                                        <option value="30d" style="background-color: rgb(51 65 85); color: white;">Last 30 Days</option>
+                                        <option value="all" style="background-color: rgb(51 65 85); color: white;">All Time</option>
                                     </select>
                                 </div>
                                 <button onclick="refreshCharts()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-lg hover:shadow-xl">

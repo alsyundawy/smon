@@ -19,5 +19,19 @@
     "url": "https://repo.indobsd.id",
     "group": "Internal",
     "enabled": true
+  },
+  {
+    "id": 4,
+    "name": "Facebook",
+    "url": "https://www.facebook.com/",
+    "group": "General Website",
+    "enabled": true
+  },
+  {
+    "id": 5,
+    "name": "Google",
+    "url": "https://www.google.com",
+    "group": "General Website",
+    "enabled": true
   }
 ]
