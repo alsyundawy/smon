@@ -14,6 +14,71 @@ const tls = require('tls');
 const app = express();
 const port = 3000;
 
+// Counter rollover tracking for bandwidth calculations
+// Key format: `${deviceId}_${interfaceIndex}_${direction}`
+let lastCounterValues = {};
+
+// Counter rollover detection and adjustment
+function handleCounterRollover(deviceId, iface, direction, currentValue) {
+  const key = `${deviceId}_${iface.index}_${direction}`;
+  const previousValue = lastCounterValues[key];
+  
+  // Initialize if first reading
+  if (previousValue === undefined) {
+    lastCounterValues[key] = currentValue;
+    return currentValue; // Return raw value for first reading
+  }
+  
+  // Detect rollover (current value is less than previous value)
+  if (currentValue < previousValue) {
+    // Assume 32-bit counter rollover (most common)
+    const max32Bit = 4294967295; // 2^32 - 1
+    const max64Bit = 18446744073709551615; // 2^64 - 1
+    
+    // Check if the drop is reasonable for a 32-bit rollover
+    const drop32Bit = max32Bit - previousValue + currentValue;
+    const drop64Bit = max64Bit - previousValue + currentValue;
+    
+    // If the drop looks like a 32-bit rollover (reasonable range), use it
+    if (drop32Bit > 0 && drop32Bit < max32Bit * 0.1) { // Less than 10% of max
+      console.log(`[${deviceId}] Counter rollover detected for ${iface.name} ${direction.toUpperCase()}: ${previousValue} -> ${currentValue}, adjusted to ${drop32Bit}`);
+      lastCounterValues[key] = currentValue;
+      return drop32Bit;
+    }
+    // If it looks like a 64-bit rollover
+    else if (drop64Bit > 0 && drop64Bit < max64Bit * 0.1) {
+      console.log(`[${deviceId}] 64-bit counter rollover detected for ${iface.name} ${direction.toUpperCase()}: ${previousValue} -> ${currentValue}, adjusted to ${drop64Bit}`);
+      lastCounterValues[key] = currentValue;
+      return drop64Bit;
+    }
+    // Otherwise, it might be a legitimate reset or interface restart
+    else {
+      console.warn(`[${deviceId}] Large counter drop detected for ${iface.name} ${direction.toUpperCase()}: ${previousValue} -> ${currentValue}. Treating as reset.`);
+      lastCounterValues[key] = currentValue;
+      return 0; // Return 0 to avoid negative bandwidth spikes
+    }
+  }
+  
+  // Normal case: current value is greater than previous
+  const delta = currentValue - previousValue;
+  lastCounterValues[key] = currentValue;
+  return delta;
+}
+
+// Cleanup old counter values to prevent memory leaks
+function cleanupCounterHistory() {
+  const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+  const now = Date.now();
+  
+  // This is a simple cleanup - in production you might want more sophisticated tracking
+  // For now, we'll just clear all counters periodically to force re-initialization
+  // This ensures we don't accumulate stale data indefinitely
+  if (Object.keys(lastCounterValues).length > 1000) { // Arbitrary limit
+    console.log('[COUNTER CLEANUP] Clearing counter history to prevent memory leaks');
+    lastCounterValues = {};
+  }
+}
+
 // Function to get SSL certificate information
 function getSSLCertificate(hostname, port = 443) {
   return new Promise((resolve, reject) => {
@@ -155,6 +220,9 @@ function getCpuOID(vendor) {
 // Function to process RX data
 function processRxData(deviceId, device, iface, rxValue, timestamp = new Date()) {
   try {
+    // Handle counter rollover and get the actual delta
+    const rxDelta = handleCounterRollover(deviceId, iface, 'rx', rxValue);
+    
     const writeApi = client.getWriteApi(settings.influxdb.org, settings.influxdb.bucket);
     const rxPoint = new Point('snmp_metric')
       .tag('device', deviceId)
@@ -163,10 +231,10 @@ function processRxData(deviceId, device, iface, rxValue, timestamp = new Date())
       .tag('direction', 'rx')
       .tag('vendor', device.vendor || 'standard')
       .timestamp(timestamp)
-      .floatField('value', rxValue);
+      .floatField('value', rxDelta);
     writeApi.writePoint(rxPoint);
     writeApi.close().then(() => {
-      console.log(`[${deviceId}] RX data written for ${iface.name}`);
+      console.log(`[${deviceId}] RX data written for ${iface.name}: ${rxDelta} octets`);
     }).catch(err => {
       console.error('InfluxDB RX write error:', err);
     });
@@ -178,6 +246,9 @@ function processRxData(deviceId, device, iface, rxValue, timestamp = new Date())
 // Function to process TX data
 function processTxData(deviceId, device, iface, txValue, timestamp = new Date()) {
   try {
+    // Handle counter rollover and get the actual delta
+    const txDelta = handleCounterRollover(deviceId, iface, 'tx', txValue);
+    
     const writeApi = client.getWriteApi(settings.influxdb.org, settings.influxdb.bucket);
     const txPoint = new Point('snmp_metric')
       .tag('device', deviceId)
@@ -186,10 +257,10 @@ function processTxData(deviceId, device, iface, txValue, timestamp = new Date())
       .tag('direction', 'tx')
       .tag('vendor', device.vendor || 'standard')
       .timestamp(timestamp)
-      .floatField('value', txValue);
+      .floatField('value', txDelta);
     writeApi.writePoint(txPoint);
     writeApi.close().then(() => {
-      console.log(`[${deviceId}] TX data written for ${iface.name}`);
+      console.log(`[${deviceId}] TX data written for ${iface.name}: ${txDelta} octets`);
     }).catch(err => {
       console.error('InfluxDB TX write error:', err);
     });
@@ -924,7 +995,7 @@ app.use(cookieParser());
 // Authentication middleware
 const requireAuth = (req, res, next) => {
   const isAuthenticated = req.cookies.authenticated === 'true';
-  if (isAuthenticated || req.path === '/login' || req.path === '/about' || req.path === '/status' || req.path.startsWith('/api/')) {
+  if (isAuthenticated || req.path === '/login' || req.path === '/about' || req.path === '/status' || req.path.startsWith('/api/') || req.path === '/metrics') {
     next();
   } else {
     res.redirect('/login');
@@ -2905,7 +2976,7 @@ app.get('/api/data', async (req, res) => {
         |> filter(fn: (r) => r._value >= 0 and r._value <= 100)
       `;
     } else {
-      // Bandwidth data
+      // Bandwidth data - now storing deltas, so just convert to Mbps
       if (interface !== 'all') {
         query += ` |> filter(fn: (r) => r.interface == "${interface}")`;
       }
@@ -2913,9 +2984,8 @@ app.get('/api/data', async (req, res) => {
         query += ` |> filter(fn: (r) => r.direction == "${direction}")`;
       }
       query += `
-        |> derivative(unit: 1s, nonNegative: true)
         |> map(fn: (r) => ({ r with _value: r._value * 8.0 / 1000000.0 }))
-        |> filter(fn: (r) => r._value > 0)
+        |> filter(fn: (r) => r._value >= 0)
       `;
     }
     
@@ -3180,27 +3250,13 @@ function checkDeviceTimeouts() {
   });
 }
 
-// Data retention cleanup function
+// Data retention cleanup function - DISABLED due to InfluxDB client API issues
 function cleanupOldData() {
-  try {
-    const retentionDays = settings.dataRetention || 730;
-    const cutoffTime = new Date(Date.now() - (retentionDays * 24 * 60 * 60 * 1000));
-    const cutoffIso = cutoffTime.toISOString();
-    
-    // Delete data older than retention period
-    const deleteQuery = `
-      from(bucket: "${settings.influxdb.bucket}")
-        |> range(start: 1970-01-01T00:00:00Z, stop: ${cutoffIso})
-        |> delete()
-    `;
-    
-    const deleteApi = client.deleteAPI();
-    deleteApi.delete(cutoffTime.getTime(), new Date().getTime(), `_measurement="snmp_metric"`, settings.influxdb.bucket, settings.influxdb.org);
-    
-    console.log(`\n[DATA RETENTION] Cleanup executed - Removed data older than ${retentionDays} days (cutoff: ${cutoffIso})\n`);
-  } catch (err) {
-    console.error('[DATA RETENTION] Cleanup error:', err);
-  }
+  console.log('[DATA RETENTION] Cleanup called at', new Date().toISOString());
+  console.log('[DATA RETENTION] Cleanup disabled - InfluxDB delete API not available in current client version');
+
+  // TODO: Implement proper data retention using InfluxDB v2 API or task
+  // For now, rely on InfluxDB's built-in retention policies
 }
 
 // Schedule daily data cleanup
@@ -3221,6 +3277,7 @@ function scheduleDataCleanup() {
     cleanupOldData();
     // Then schedule it to run every 24 hours
     setInterval(cleanupOldData, 24 * 60 * 60 * 1000);
+    setInterval(cleanupCounterHistory, 6 * 60 * 60 * 1000); // Every 6 hours
   }, timeUntilCleanup);
   
   console.log(`[DATA RETENTION] Daily cleanup scheduled for ${scheduledTime.toLocaleTimeString()}`);
@@ -3940,6 +3997,208 @@ app.post('/api/sync-offline-data', (req, res) => {
   } catch (error) {
     console.error('[SYNC] Offline data sync error:', error);
     res.status(500).json({ error: 'Failed to sync offline data' });
+  }
+});
+
+// Prometheus Metrics Endpoint
+app.get('/metrics', (req, res) => {
+  let metrics = '';
+
+  // System Metrics
+  const os = require('os');
+  const uptime = os.uptime();
+  const totalMemory = os.totalmem();
+  const freeMemory = os.freemem();
+  const usedMemory = totalMemory - freeMemory;
+
+  // CPU Usage
+  const cpus = os.cpus();
+  let totalIdle = 0;
+  let totalTick = 0;
+  cpus.forEach(cpu => {
+    for (let type in cpu.times) {
+      totalTick += cpu.times[type];
+    }
+    totalIdle += cpu.times.idle;
+  });
+  const idle = totalIdle / cpus.length;
+  const total = totalTick / cpus.length;
+  const cpuUsage = Math.round(100 - ~~(100 * idle / total));
+
+  metrics += '# HELP smon_system_uptime_seconds System uptime in seconds\n';
+  metrics += '# TYPE smon_system_uptime_seconds gauge\n';
+  metrics += `smon_system_uptime_seconds ${uptime}\n\n`;
+
+  metrics += '# HELP smon_system_cpu_usage_percent CPU usage percentage\n';
+  metrics += '# TYPE smon_system_cpu_usage_percent gauge\n';
+  metrics += `smon_system_cpu_usage_percent ${cpuUsage}\n\n`;
+
+  metrics += '# HELP smon_system_memory_used_bytes Memory used in bytes\n';
+  metrics += '# TYPE smon_system_memory_used_bytes gauge\n';
+  metrics += `smon_system_memory_used_bytes ${usedMemory}\n\n`;
+
+  metrics += '# HELP smon_system_memory_total_bytes Total memory in bytes\n';
+  metrics += '# TYPE smon_system_memory_total_bytes gauge\n';
+  metrics += `smon_system_memory_total_bytes ${totalMemory}\n\n`;
+
+  // Device Status Metrics
+  metrics += '# HELP smon_device_status Device status (1=up, 0=down)\n';
+  metrics += '# TYPE smon_device_status gauge\n';
+  Object.values(snmpDevices).forEach(device => {
+    const status = device.enabled ? 1 : 0;
+    metrics += `smon_device_status{device_id="${device.id}",device_name="${device.name}",device_host="${device.host}"} ${status}\n`;
+  });
+  metrics += '\n';
+
+  // Ping Target Metrics
+  metrics += '# HELP smon_ping_target_status Ping target status (1=alive, 0=dead)\n';
+  metrics += '# TYPE smon_ping_target_status gauge\n';
+
+  metrics += '# HELP smon_ping_target_latency_ms Ping target latency in milliseconds\n';
+  metrics += '# TYPE smon_ping_target_latency_ms gauge\n';
+
+  metrics += '# HELP smon_ping_target_packet_loss_percent Ping target packet loss percentage\n';
+  metrics += '# TYPE smon_ping_target_packet_loss_percent gauge\n';
+
+  pingTargets.forEach(target => {
+    if (target.enabled && target.latest) {
+      const status = target.latest.alive ? 1 : 0;
+      const latency = target.latest.time || 0;
+      const packetLoss = target.latest.packetLoss || 0;
+
+      metrics += `smon_ping_target_status{target_id="${target.id}",target_name="${target.name}",target_host="${target.host}",group="${target.group}"} ${status}\n`;
+      metrics += `smon_ping_target_latency_ms{target_id="${target.id}",target_name="${target.name}",target_host="${target.host}",group="${target.group}"} ${latency}\n`;
+      metrics += `smon_ping_target_packet_loss_percent{target_id="${target.id}",target_name="${target.name}",target_host="${target.host}",group="${target.group}"} ${packetLoss}\n`;
+    }
+  });
+  metrics += '\n';
+
+  // Website Monitoring Metrics
+  metrics += '# HELP smon_website_status Website status (1=up, 0=down)\n';
+  metrics += '# TYPE smon_website_status gauge\n';
+
+  metrics += '# HELP smon_website_response_time_ms Website response time in milliseconds\n';
+  metrics += '# TYPE smon_website_response_time_ms gauge\n';
+
+  metrics += '# HELP smon_website_ssl_expiry_days SSL certificate expiry days remaining\n';
+  metrics += '# TYPE smon_website_ssl_expiry_days gauge\n';
+
+  websiteTargets.forEach(target => {
+    if (target.enabled && target.latest) {
+      const status = target.latest.status === 'up' ? 1 : 0;
+      const responseTime = target.latest.responseTime || 0;
+      const sslDays = target.latest.sslDaysRemaining || 0;
+
+      metrics += `smon_website_status{target_id="${target.id}",target_name="${target.name}",target_url="${target.url}",group="${target.group}"} ${status}\n`;
+      metrics += `smon_website_response_time_ms{target_id="${target.id}",target_name="${target.name}",target_url="${target.url}",group="${target.group}"} ${responseTime}\n`;
+      metrics += `smon_website_ssl_expiry_days{target_id="${target.id}",target_name="${target.name}",target_url="${target.url}",group="${target.group}"} ${sslDays}\n`;
+    }
+  });
+  metrics += '\n';
+
+  // Domain Monitoring Metrics
+  metrics += '# HELP smon_domain_status Domain status (1=active, 0=expired)\n';
+  metrics += '# TYPE smon_domain_status gauge\n';
+
+  metrics += '# HELP smon_domain_expiry_days Domain expiry days remaining\n';
+  metrics += '# TYPE smon_domain_expiry_days gauge\n';
+
+  metrics += '# HELP smon_domain_auto_renew Domain auto-renew status (1=enabled, 0=disabled)\n';
+  metrics += '# TYPE smon_domain_auto_renew gauge\n';
+
+  domainTargets.forEach(domain => {
+    if (domain.enabled) {
+      const daysLeft = Math.ceil((new Date(domain.expiration_date) - new Date()) / (1000 * 60 * 60 * 24));
+      const status = daysLeft > 0 ? 1 : 0;
+      const autoRenew = domain.auto_renew ? 1 : 0;
+
+      metrics += `smon_domain_status{domain_id="${domain.id}",domain_name="${domain.name}",registrar="${domain.registrar}",group="${domain.group}"} ${status}\n`;
+      metrics += `smon_domain_expiry_days{domain_id="${domain.id}",domain_name="${domain.name}",registrar="${domain.registrar}",group="${domain.group}"} ${daysLeft}\n`;
+      metrics += `smon_domain_auto_renew{domain_id="${domain.id}",domain_name="${domain.name}",registrar="${domain.registrar}",group="${domain.group}"} ${autoRenew}\n`;
+    }
+  });
+  metrics += '\n';
+
+  // Event Counters
+  const eventStats = {
+    total: eventHistory.length,
+    critical: eventHistory.filter(e => e.severity === 'critical').length,
+    warning: eventHistory.filter(e => e.severity === 'warning').length,
+    info: eventHistory.filter(e => e.severity === 'info').length,
+    error: eventHistory.filter(e => e.severity === 'error').length
+  };
+
+  metrics += '# HELP smon_events_total Total number of events\n';
+  metrics += '# TYPE smon_events_total counter\n';
+  metrics += `smon_events_total ${eventStats.total}\n\n`;
+
+  metrics += '# HELP smon_events_by_severity Events by severity level\n';
+  metrics += '# TYPE smon_events_by_severity gauge\n';
+  metrics += `smon_events_by_severity{severity="critical"} ${eventStats.critical}\n`;
+  metrics += `smon_events_by_severity{severity="warning"} ${eventStats.warning}\n`;
+  metrics += `smon_events_by_severity{severity="error"} ${eventStats.error}\n`;
+  metrics += `smon_events_by_severity{severity="info"} ${eventStats.info}\n\n`;
+
+  // Set proper headers for Prometheus
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.send(metrics);
+});
+
+// Test routes for error handling (remove in production)
+app.get('/test-404', (req, res, next) => {
+  next(); // This will trigger 404 handler
+});
+
+app.get('/test-500', (req, res, next) => {
+  const error = new Error('Test internal server error');
+  error.status = 500;
+  next(error);
+});
+
+// Error handling middleware
+// 404 Not Found handler
+app.use((req, res, next) => {
+  const error = new Error(`Route ${req.originalUrl} not found`);
+  error.status = 404;
+  next(error);
+});
+
+// 500 Internal Server Error handler
+app.use((err, req, res, next) => {
+  // Log error for debugging
+  console.error('Error occurred:', {
+    message: err.message,
+    stack: err.stack,
+    url: req.originalUrl,
+    method: req.method,
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
+    timestamp: new Date().toISOString()
+  });
+
+  // Set status code
+  const statusCode = err.status || err.statusCode || 500;
+
+  // Check if request accepts HTML
+  const acceptsHTML = req.accepts('html');
+
+  if (acceptsHTML && statusCode === 404) {
+    // Send 404 HTML page
+    res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+  } else if (acceptsHTML && statusCode === 500) {
+    // Send 500 HTML page
+    res.status(500).sendFile(path.join(__dirname, 'public', '500.html'));
+  } else {
+    // Send JSON response for API requests
+    res.status(statusCode).json({
+      error: {
+        message: statusCode === 500 ? 'Internal Server Error' : err.message,
+        status: statusCode,
+        timestamp: new Date().toISOString(),
+        path: req.originalUrl
+      }
+    });
   }
 });
 

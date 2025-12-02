@@ -1,5 +1,86 @@
 [
   {
+    "id": 1764599035265,
+    "timestamp": "2025-12-01T14:23:55.265Z",
+    "type": "device_online",
+    "severity": "info",
+    "source": "Core Router Rumah",
+    "message": "Device \"Core Router Rumah\" (172.16.27.1) is now online",
+    "details": {
+      "deviceId": "core-rumah",
+      "deviceName": "Core Router Rumah",
+      "host": "172.16.27.1"
+    }
+  },
+  {
+    "id": 1764599035261,
+    "timestamp": "2025-12-01T14:23:55.261Z",
+    "type": "device_online",
+    "severity": "info",
+    "source": "Core Indobsd <-> Biznet",
+    "message": "Device \"Core Indobsd <-> Biznet\" (103.142.215.254) is now online",
+    "details": {
+      "deviceId": "core-idbsd-biz",
+      "deviceName": "Core Indobsd <-> Biznet",
+      "host": "103.142.215.254"
+    }
+  },
+  {
+    "id": 1764599035257,
+    "timestamp": "2025-12-01T14:23:55.257Z",
+    "type": "device_online",
+    "severity": "info",
+    "source": "Distribusi Router Ipe",
+    "message": "Device \"Distribusi Router Ipe\" (172.16.27.2) is now online",
+    "details": {
+      "deviceId": "distri-ipe",
+      "deviceName": "Distribusi Router Ipe",
+      "host": "172.16.27.2"
+    }
+  },
+  {
+    "id": 1764599035253,
+    "timestamp": "2025-12-01T14:23:55.254Z",
+    "type": "device_offline",
+    "severity": "error",
+    "source": "Core Router Rumah",
+    "message": "Device \"Core Router Rumah\" (172.16.27.1) is offline - no response for 5 minutes",
+    "details": {
+      "deviceId": "core-rumah",
+      "deviceName": "Core Router Rumah",
+      "host": "172.16.27.1",
+      "timeSinceLastResponse": 300001
+    }
+  },
+  {
+    "id": 1764599035250,
+    "timestamp": "2025-12-01T14:23:55.250Z",
+    "type": "device_offline",
+    "severity": "error",
+    "source": "Core Indobsd <-> Biznet",
+    "message": "Device \"Core Indobsd <-> Biznet\" (103.142.215.254) is offline - no response for 5 minutes",
+    "details": {
+      "deviceId": "core-idbsd-biz",
+      "deviceName": "Core Indobsd <-> Biznet",
+      "host": "103.142.215.254",
+      "timeSinceLastResponse": 300002
+    }
+  },
+  {
+    "id": 1764599035244,
+    "timestamp": "2025-12-01T14:23:55.244Z",
+    "type": "device_offline",
+    "severity": "error",
+    "source": "Distribusi Router Ipe",
+    "message": "Device \"Distribusi Router Ipe\" (172.16.27.2) is offline - no response for 5 minutes",
+    "details": {
+      "deviceId": "distri-ipe",
+      "deviceName": "Distribusi Router Ipe",
+      "host": "172.16.27.2",
+      "timeSinceLastResponse": 300003
+    }
+  },
+  {
     "id": 1764595436634,
     "timestamp": "2025-12-01T13:23:56.634Z",
     "type": "website_up",
