@@ -262,22 +262,27 @@
                         style: {
                             'background-color': (ele) => getNodeColor(ele.data('status')),
                             'background-opacity': 0.9,
+                            'background-image': (ele) => getNodeIcon(ele.data('type')),
+                            'background-image-opacity': 0.9,
+                            'background-fit': 'cover',
+                            'background-position-x': '50%',
+                            'background-position-y': '40%',
                             'label': 'data(label)',
-                            'text-valign': 'center',
+                            'text-valign': 'bottom',
                             'text-halign': 'center',
                             'font-size': 10,
                             'font-weight': '600',
                             'color': '#fff',
                             'text-max-width': 65,
                             'text-wrap': 'wrap',
-                            'width': 65,
-                            'height': 65,
+                            'width': 70,
+                            'height': 70,
                             'border-width': 2.5,
                             'border-color': 'rgba(255, 255, 255, 0.8)',
                             'border-opacity': 0.9,
-                            'shape': (ele) => getNodeShape(ele.data('type')),
+                            'shape': 'ellipse',
                             'z-index': 10,
-                            'text-margin-y': -7,
+                            'text-margin-y': -5,
                             'padding': 8,
                             'box-shadow': '0 4px 12px rgba(0, 0, 0, 0.4)'
                         }
@@ -362,6 +367,19 @@
                 case 'warning': return '#ea580c';       // orange-600 (richer)
                 default: return '#4b5563';              // slate-500 (neutral)
             }
+        }
+
+        function getNodeIcon(type) {
+            // Font Awesome SVG icons encoded as data URLs
+            const icons = {
+                'router': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><path fill="white" d="M320 32c-8.6 0-17.3 1.5-25.5 4.1C246.1 45 224 68.8 224 96s22.1 51 70.5 59.9c8.2 2.6 16.9 4.1 25.5 4.1s17.3-1.5 25.5-4.1c48.3-8.9 70.5-32.7 70.5-59.9s-22.1-51-70.5-59.9C337.3 33.5 328.6 32 320 32zM552 0H88C39.4 0 0 39.4 0 88v336c0 48.6 39.4 88 88 88h464c48.6 0 88-39.4 88-88V88c0-48.6-39.4-88-88-88zm0 48v80H88V48h464zM88 464V176h464v288H88z"/></svg>',
+                'switch': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="white" d="M464 128H352V80c0-26.51-21.49-48-48-48H208c-26.51 0-48 21.49-48 48v48H48c-26.51 0-48 21.49-48 48v288c0 26.51 21.49 48 48 48h416c26.51 0 48-21.49 48-48V176c0-26.51-21.49-48-48-48zM208 80h96v48h-96V80zm256 368H48V176h416v272z"/></svg>',
+                'server': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="white" d="M480 160H32c-17.7 0-32 14.3-32 32v96c0 17.7 14.3 32 32 32h448c17.7 0 32-14.3 32-32v-96c0-17.7-14.3-32-32-32zm-48 72c-13.3 0-24-10.7-24-24s10.7-24 24-24 24 10.7 24 24-10.7 24-24 24zm0 192H32c-17.7 0-32 14.3-32 32v96c0 17.7 14.3 32 32 32h448c17.7 0 32-14.3 32-32v-96c0-17.7-14.3-32-32-32zm-48 72c-13.3 0-24-10.7-24-24s10.7-24 24-24 24 10.7 24 24-10.7 24-24 24z"/></svg>',
+                'access-point': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><path fill="white" d="M320 0C142.6 0 0 142.6 0 320c0 177.4 142.6 320 320 320s320-142.6 320-320C640 142.6 497.4 0 320 0zm0 32c159.1 0 288 128.9 288 288S479.1 608 320 608S32 479.1 32 320S160.9 32 320 32zM320 96c-106 0-192 86-192 192s86 192 192 192s192-86 192-192S426 96 320 96zm0 32c88.22 0 160 71.78 160 160s-71.78 160-160 160S160 376.2 160 288S232.2 128 320 128zm0 32c-70.69 0-128 57.31-128 128s57.31 128 128 128s128-57.31 128-128S390.7 160 320 160z"/></svg>',
+                'site': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="white" d="M256 48C141.13 48 48 141.13 48 256s93.13 208 208 208 208-93.13 208-208S370.87 48 256 48zm0 384c-96.99 0-176-79.01-176-176s79.01-176 176-176 176 79.01 176 176-79.01 176-176 176zm0-320c-79.41 0-144 64.59-144 144s64.59 144 144 144 144-64.59 144-144-64.59-144-144-144z"/></svg>',
+                'default': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="white" d="M464 256A208 208 0 1 0 48 256a208 208 0 1 0 416 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256z"/></svg>'
+            };
+            return icons[type] || icons['default'];
         }
 
         function getNodeShape(type) {
