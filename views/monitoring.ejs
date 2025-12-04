@@ -518,6 +518,11 @@
       if (currentDevice) {
         deviceSelector.value = currentDevice;
         loadInterfaces(currentDevice);
+        
+        // Auto-load chart data when device is pre-selected from URL
+        setTimeout(() => {
+          loadChartData();
+        }, 500);
       }
     });
 
@@ -1271,6 +1276,9 @@
                     container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-400"><i class="fas fa-chart-line text-4xl mb-4 opacity-50"></i><p>No interfaces with traffic data found for the selected time range</p></div>';
                     noDataMessageShown = true;
                   }
+                  
+                  // Connect SSE for real-time updates after charts are loaded
+                  connectSSE();
                 }, 100);
               });
             }

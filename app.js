@@ -3053,9 +3053,12 @@ async function broadcastMonitoringData() {
   const sseClients = globalThis.sseMonitoringClients || [];
   if (sseClients.length === 0) return;
   
+  console.log(`[SSE] broadcastMonitoringData: ${sseClients.length} clients connected`);
+  
   try {
     for (const client of sseClients) {
       if (client.res.closed || client.res.destroyed) {
+        console.log(`[SSE] Skipping closed/destroyed client: ${client.id}`);
         continue;
       }
       
@@ -3074,6 +3077,8 @@ async function sendLatestBandwidthData(client) {
     const interfaces = client.interfaces;
     const pollingIntervalSeconds = settings.pollingInterval / 1000;
     
+    console.log(`[SSE] sendLatestBandwidthData called for device: ${deviceId}, interfaces: ${interfaces.join(', ')}, pollingInterval: ${pollingIntervalSeconds}s`);
+    
     let query = `
       from(bucket: "${settings.influxdb.bucket}")
       |> range(start: -5m)
@@ -3089,6 +3094,7 @@ async function sendLatestBandwidthData(client) {
     }
     
     query += `
+      |> group(columns: ["device", "interface", "direction"])
       |> map(fn: (r) => ({ r with _value: r._value * 8.0 / 1000000.0 / ${pollingIntervalSeconds}.0 }))
       |> filter(fn: (r) => r._value >= 0)
       |> last()
@@ -3105,10 +3111,14 @@ async function sendLatestBandwidthData(client) {
       queryApi.queryRows(query, {
         next(row, tableMeta) {
           const o = tableMeta.toObject(row);
+          const mbpsValue = parseFloat(o._value.toFixed(2));
+          
+          console.log(`[SSE] Bandwidth data for ${o.interface} (${o.direction}): ${mbpsValue} Mbps (raw: ${o._value})`);
+          
           data.push({
             interface: o.interface,
             direction: o.direction,
-            value: parseFloat(o._value.toFixed(2)),
+            value: mbpsValue,
             timestamp: o._time,
             device: o.device
           });
@@ -3149,7 +3159,7 @@ setInterval(() => {
   broadcastMonitoringData().catch(err => {
     console.error('[SSE] Broadcast error:', err.message);
   });
-}, settings.pollingInterval);
+}, 10000); // 10 seconds for testing (normally: settings.pollingInterval)
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
