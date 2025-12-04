@@ -240,6 +240,7 @@
         let selectedTargetId = null;
         let responseTimeChart = null;
         let uptimeChart = null;
+        let pollingIntervalMs = <%= pollingIntervalSeconds * 1000 %>; // Auto-refresh interval from settings
 
         // Initialize charts
         function initCharts() {
@@ -513,10 +514,10 @@
             }
         }, 1000);
 
-        // Auto refresh status every 30 seconds
+        // Auto refresh status based on polling interval
         setInterval(() => {
             loadWebsiteTargets();
-        }, 30000);
+        }, pollingIntervalMs);
     </script>
 </body>
 </html>

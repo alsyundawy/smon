@@ -1457,7 +1457,9 @@ app.get('/', (req, res) => {
     interfaces: allInterfaces,
     pingTargets: safePingTargets,
     groupedPingTargets: groupedPingTargets,
-    settings: settings
+    settings: settings,
+    pollingIntervalSeconds: settings.pollingInterval / 1000,
+    pingIntervalSeconds: settings.pingInterval ? settings.pingInterval / 1000 : 30
   });
 });
 
@@ -1478,18 +1480,29 @@ app.get('/settings', (req, res) => {
 
 // Route for history page
 app.get('/history', (req, res) => {
-  res.render('history');
+  res.render('history', {
+    settings: settings,
+    pollingIntervalSeconds: settings.pollingInterval / 1000,
+    pingIntervalSeconds: settings.pingInterval ? settings.pingInterval / 1000 : 30
+  });
 });
 
 // Route for about page
 app.get('/about', (req, res) => {
-  res.render('about');
+  res.render('about', {
+    settings: settings,
+    pollingIntervalSeconds: settings.pollingInterval / 1000,
+    pingIntervalSeconds: settings.pingInterval ? settings.pingInterval / 1000 : 30
+  });
 });
 
 // Route for public status page (no authentication required)
 app.get('/status', (req, res) => {
   res.render('status', {
-    title: 'System Status - SMon'
+    title: 'System Status - SMon',
+    settings: settings,
+    pollingIntervalSeconds: settings.pollingInterval / 1000,
+    pingIntervalSeconds: settings.pingInterval ? settings.pingInterval / 1000 : 30
   });
 });
 
@@ -1507,7 +1520,9 @@ app.get('/ping', (req, res) => {
   res.render('ping', { 
     pingTargets: pingTargets,
     groupedTargets: groupedTargets,
-    settings: settings
+    settings: settings,
+    pollingIntervalSeconds: settings.pollingInterval / 1000,
+    pingIntervalSeconds: settings.pingInterval ? settings.pingInterval / 1000 : 30
   });
 });
 
@@ -1525,7 +1540,9 @@ app.get('/domains', (req, res) => {
   res.render('domains', {
     domainTargets: domainTargets,
     groupedTargets: groupedTargets,
-    settings: settings
+    settings: settings,
+    pollingIntervalSeconds: settings.pollingInterval / 1000,
+    pingIntervalSeconds: settings.pingInterval ? settings.pingInterval / 1000 : 30
   });
 });
 
@@ -1543,7 +1560,9 @@ app.get('/websites', (req, res) => {
   res.render('websites', { 
     websiteTargets: websiteTargets,
     groupedTargets: groupedTargets,
-    settings: settings
+    settings: settings,
+    pollingIntervalSeconds: settings.pollingInterval / 1000,
+    pingIntervalSeconds: settings.pingInterval ? settings.pingInterval / 1000 : 30
   });
 });
 
@@ -2076,7 +2095,9 @@ app.get('/monitoring', async (req, res) => {
     if (Object.keys(snmpDevices).length === 0) {
       return res.render('monitoring', {
         devices: {},
-        selectedDevice: null
+        selectedDevice: null,
+        pollingIntervalSeconds: settings.pollingInterval / 1000,
+        pingIntervalSeconds: settings.pingInterval ? settings.pingInterval / 1000 : 30
       });
     }
 
@@ -2087,7 +2108,9 @@ app.get('/monitoring', async (req, res) => {
 
     res.render('monitoring', {
       devices: snmpDevices,
-      selectedDevice: deviceId
+      selectedDevice: deviceId,
+      pollingIntervalSeconds: settings.pollingInterval / 1000,
+      pingIntervalSeconds: settings.pingInterval ? settings.pingInterval / 1000 : 30
     });
   } catch (err) {
     console.error('Route error:', err);

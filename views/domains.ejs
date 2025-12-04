@@ -234,6 +234,7 @@
         // Global chart instances
         let expirationChart = null;
         let statusChart = null;
+        let pollingIntervalMs = <%= pollingIntervalSeconds * 1000 %>; // Auto-refresh interval from settings
 
         // Mobile menu toggle
         document.getElementById('mobile-menu-button').addEventListener('click', function() {
@@ -549,11 +550,11 @@
             updateHeaderStats();
             loadDomainData();
 
-            // Update every 30 seconds
+            // Update based on polling interval
             setInterval(() => {
                 updateHeaderStats();
                 loadDomainData();
-            }, 30000);
+            }, pollingIntervalMs);
 
             // Add Domain Modal Functionality
             document.getElementById('add-domain-btn').addEventListener('click', function() {

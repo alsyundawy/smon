@@ -226,6 +226,7 @@
       database: { status: 'unknown', message: 'Checking...' },
       telegram: { status: 'unknown', message: 'Checking...' }
     };
+    let pollingIntervalMs = <%= pollingIntervalSeconds * 1000 %>; // Auto-refresh interval from settings
 
     // Update status cards
     function updateStatusCards() {
@@ -869,7 +870,7 @@
       loadDomainStatus();
       loadHistoryStatus();
 
-      // Update every 30 seconds
+      // Update based on configured polling interval
       setInterval(() => {
         updateSystemInfo();
         checkStatuses();
@@ -879,7 +880,7 @@
         loadWebsiteStatus();
         loadDomainStatus();
         loadHistoryStatus();
-      }, 30000);
+      }, pollingIntervalMs);
     });
   </script>
 </body>

@@ -360,6 +360,7 @@
     let filteredEvents = [];
     let currentPage = 1;
     const eventsPerPage = 50;
+    let pollingIntervalMs = <%= pollingIntervalSeconds * 1000 %>; // Auto-refresh interval from settings
 
     // Event type configurations
     const eventTypes = {
@@ -769,7 +770,7 @@
 
     // Initial update and periodic refresh
     updateHeaderStats();
-    setInterval(updateHeaderStats, 10000); // Update every 10 seconds
+    setInterval(updateHeaderStats, pollingIntervalMs); // Update based on polling interval
   </script>
 </body>
 </html></html>

@@ -389,6 +389,7 @@
         let pingHistory = {};
         let pingCharts = {};
         let chartData = {};
+        let pollingIntervalMs = <%= pollingIntervalSeconds * 1000 %>; // Auto-refresh interval from settings
         let notificationSettings = {
             enabled: <%= settings.pingNotifications?.enabled ? 'true' : 'false' %>,
             notifyOnDown: <%= settings.pingNotifications?.notifyOnDown ? 'true' : 'false' %>,
@@ -403,8 +404,8 @@
             startPingMonitoring();
             updateHeaderStats();
             
-            // Update header stats every 10 seconds
-            setInterval(updateHeaderStats, 10000);
+            // Update header stats based on polling interval
+            setInterval(updateHeaderStats, pollingIntervalMs);
             
             // Add event listener for time range filter
             document.getElementById('timeRangeFilter').addEventListener('change', function() {

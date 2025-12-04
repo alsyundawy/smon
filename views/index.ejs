@@ -610,6 +610,7 @@
     let pingTargets = <%- JSON.stringify(pingTargets) %>;
     let isPingMonitoring = false;
     let pingInterval = <%= settings.pingInterval ? settings.pingInterval : 60000 %>;
+    let pollingIntervalMs = <%= pollingIntervalSeconds * 1000 %>; // Auto-refresh interval from settings
 
     // Update last updated time
     function updateLastUpdateTime() {
@@ -778,9 +779,9 @@
       updateSystemInfo();
       startDashboardPingMonitoring();
 
-      // Update every minute
+      // Update based on configured polling interval
       setInterval(updateLastUpdateTime, 60000);
-      setInterval(updateSystemInfo, 30000); // Update system info every 30 seconds
+      setInterval(updateSystemInfo, pollingIntervalMs); // Update system info based on polling interval
     });
 
     // PWA and Service Worker functionality
