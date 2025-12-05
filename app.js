@@ -1748,6 +1748,16 @@ app.get('/map', (req, res) => {
   });
 });
 
+// Network Weathermap Page
+app.get('/weathermap', (req, res) => {
+  res.render('weathermap', {
+    title: 'Network Weathermap',
+    settings: settings,
+    pollingIntervalSeconds: settings.pollingInterval / 1000,
+    pingIntervalSeconds: settings.pingInterval ? settings.pingInterval / 1000 : 30
+  });
+});
+
 // API to get ping targets
 app.get('/api/ping-targets', (req, res) => {
   res.json(pingTargets);
@@ -3199,6 +3209,257 @@ app.post('/api/devices/:deviceId/select-interfaces', (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
+// API to get weathermap link data
+app.get('/api/weathermap/links', async (req, res) => {
+  try {
+    const devices = [];
+    const links = [];
+
+    // Iterate through all SNMP devices
+    for (const [deviceId, device] of Object.entries(snmpDevices)) {
+      // Add device to devices array
+      devices.push({
+        id: deviceId,
+        name: device.name,
+        status: deviceStatusHistory[deviceId]?.alive ? 'up' : 'down',
+        host: device.host,
+        vendor: device.vendor || 'unknown',
+        type: 'device',
+        hasSnmpData: device.selectedInterfaces && device.selectedInterfaces.length > 0
+      });
+
+      // Get interfaces for this device
+      if (device.selectedInterfaces && device.selectedInterfaces.length > 0) {
+        for (const iface of device.selectedInterfaces) {
+          if (typeof iface === 'object' && iface.index && iface.name) {
+            try {
+              // Query InfluxDB for bandwidth data for this interface
+              const bandwidthData = await getCurrentBandwidth(deviceId, iface.name);
+              
+              if (bandwidthData && bandwidthData.rxMbps !== null && bandwidthData.txMbps !== null) {
+                // Calculate load based on speed
+                const totalMbps = (bandwidthData.rxMbps + bandwidthData.txMbps);
+                let load = 0;
+                
+                if (bandwidthData.speed && bandwidthData.speed > 0) {
+                  // Speed is in bps, convert to Mbps for calculation
+                  const speedMbps = bandwidthData.speed / 1000000;
+                  load = Math.min(100, (totalMbps / speedMbps) * 100);
+                } else {
+                  // If no speed data, estimate based on interface type
+                  let estimatedSpeedMbps = 1000; // Default 1Gbps
+                  
+                  const interfaceName = iface.name.toLowerCase();
+                  if (interfaceName.includes('sfp') || interfaceName.includes('10g')) {
+                    estimatedSpeedMbps = 10000; // 10Gbps for SFP/SFP+ interfaces
+                  } else if (interfaceName.includes('ether') && !interfaceName.includes('10')) {
+                    estimatedSpeedMbps = 1000; // 1Gbps for Ethernet
+                  } else if (interfaceName.includes('vlan') || interfaceName.includes('bridge')) {
+                    estimatedSpeedMbps = 1000; // 1Gbps for VLAN/Bridge
+                  }
+                  
+                  load = Math.min(100, (totalMbps / estimatedSpeedMbps) * 100);
+                }
+
+                // Create a link for this interface (self-link to show load)
+                links.push({
+                  id: `${deviceId}_${iface.index}`,
+                  sourceDevice: deviceId,
+                  targetDevice: deviceId,
+                  load: Math.max(0, Math.min(100, load)),
+                  speed: bandwidthData.speed || null,
+                  interface: iface.name,
+                  direction: 'bidirectional',
+                  description: `${iface.name} (${bandwidthData.rxMbps.toFixed(1)}/${bandwidthData.txMbps.toFixed(1)} Mbps, ${load.toFixed(2)}%)`
+                });
+              }
+            } catch (error) {
+              console.error(`[WEATHERMAP] Error getting bandwidth for ${deviceId}:${iface.name}:`, error);
+            }
+          }
+        }
+      }
+    }
+
+    console.log(`[WEATHERMAP] Returning ${devices.length} devices and ${links.length} links`);
+    
+    res.json({
+      devices: devices,
+      links: links
+    });
+  } catch (err) {
+    console.error('Error fetching weathermap data:', err);
+    res.status(500).json({ error: 'Failed to fetch weathermap data' });
+  }
+});
+
+// API to get bandwidth data for specific interface
+app.get('/api/devices/:deviceId/interfaces/:interfaceName/bandwidth', async (req, res) => {
+  try {
+    const { deviceId, interfaceName } = req.params;
+    
+    if (!snmpDevices[deviceId]) {
+      return res.status(404).json({ error: 'Device not found' });
+    }
+
+    const bandwidthData = await getCurrentBandwidth(deviceId, interfaceName);
+    
+    if (!bandwidthData) {
+      return res.json({ rxMbps: 0, txMbps: 0 });
+    }
+
+    res.json({
+      rxMbps: bandwidthData.rxMbps || 0,
+      txMbps: bandwidthData.txMbps || 0,
+      speed: bandwidthData.speed || null
+    });
+  } catch (error) {
+    console.error(`[BANDWIDTH] Error getting bandwidth for ${deviceId}:${interfaceName}:`, error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Helper function to get interface speed via SNMP
+async function getInterfaceSpeed(deviceId, interfaceIndex) {
+  return new Promise((resolve, reject) => {
+    const session = snmpSessions[deviceId];
+    if (!session) {
+      resolve(null);
+      return;
+    }
+
+    // OID for interface speed (IF-MIB::ifSpeed)
+    const oid = `1.3.6.1.2.1.2.2.1.5.${interfaceIndex}`;
+
+    session.get([oid], (error, varbinds) => {
+      if (error) {
+        console.warn(`SNMP error getting speed for ${deviceId}:${interfaceIndex}:`, error.message);
+        resolve(null);
+        return;
+      }
+
+      if (varbinds && varbinds[0] && varbinds[0].value !== undefined) {
+        const speed = varbinds[0].value;
+        // ifSpeed is in bits per second, return as is
+        resolve(speed);
+      } else {
+        resolve(null);
+      }
+    });
+  });
+}
+
+// Helper function to get current bandwidth for an interface
+async function getCurrentBandwidth(deviceId, interfaceName) {
+  try {
+    const queryApi = client.getQueryApi(settings.influxdb.org);
+
+    // Query last 10 minutes of data to calculate rate
+    const fluxQuery = `
+      from(bucket: "${settings.influxdb.bucket}")
+        |> range(start: -10m)
+        |> filter(fn: (r) => r["_measurement"] == "snmp_metric")
+        |> filter(fn: (r) => r["device"] == "${deviceId}")
+        |> filter(fn: (r) => r["interface"] == "${interfaceName}")
+        |> filter(fn: (r) => r["_field"] == "value")
+        |> sort(columns: ["_time"], desc: true)
+        |> limit(n: 20)
+    `;
+
+    const result = await queryApi.collectRows(fluxQuery);
+
+    if (result.length === 0) return null;
+
+    // Group data by direction
+    const rxData = result.filter(row => row.direction === 'rx').slice(0, 5); // Last 5 RX points
+    const txData = result.filter(row => row.direction === 'tx').slice(0, 5); // Last 5 TX points
+
+    // Reverse to get oldest first for proper diff calculation
+    rxData.reverse();
+    txData.reverse();
+
+    // Calculate average rate for RX
+    let rxMbps = 0;
+    if (rxData.length >= 2) {
+      const timeDiff = (new Date(rxData[rxData.length - 1]._time).getTime() - new Date(rxData[0]._time).getTime()) / 1000 / 60; // minutes
+      const maxCounterValue = 4294967295; // 2^32 - 1 for 32-bit counters
+      const totalOctets = rxData.slice(0, -1).reduce((sum, point, index) => {
+        let diff = rxData[index + 1]._value - point._value;
+        // Handle counter rollover
+        if (diff < 0) {
+          diff += maxCounterValue + 1;
+        }
+        return sum + diff;
+      }, 0);
+      const avgOctetsPerSecond = totalOctets / (timeDiff * 60);
+      rxMbps = (avgOctetsPerSecond * 8) / 1000000; // Convert to Mbps
+    }
+
+    // Calculate average rate for TX
+    let txMbps = 0;
+    if (txData.length >= 2) {
+      const timeDiff = (new Date(txData[txData.length - 1]._time).getTime() - new Date(txData[0]._time).getTime()) / 1000 / 60; // minutes
+      const maxCounterValue = 4294967295; // 2^32 - 1 for 32-bit counters (many interfaces use 32-bit)
+      const totalOctets = txData.slice(0, -1).reduce((sum, point, index) => {
+        let diff = txData[index + 1]._value - point._value;
+        // Handle counter rollover
+        if (diff < 0) {
+          diff += maxCounterValue + 1;
+        }
+        return sum + diff;
+      }, 0);
+      const avgOctetsPerSecond = totalOctets / (timeDiff * 60);
+      txMbps = (avgOctetsPerSecond * 8) / 1000000; // Convert to Mbps
+    }
+
+    // Get interface speed (if available)
+    let speed = null;
+    try {
+      // Try to get speed from SNMP first
+      const device = snmpDevices[deviceId];
+      if (device && device.selectedInterfaces) {
+        const iface = device.selectedInterfaces.find(i => i.name === interfaceName);
+        if (iface && iface.index) {
+          speed = await getInterfaceSpeed(deviceId, iface.index);
+        }
+      }
+
+      // Fallback to config if SNMP fails
+      if (!speed && device && device.selectedInterfaces) {
+        const iface = device.selectedInterfaces.find(i => i.name === interfaceName);
+        if (iface && iface.speed) {
+          speed = iface.speed;
+        }
+      }
+    } catch (error) {
+      console.warn(`Could not get speed for ${deviceId}:${interfaceName}:`, error.message);
+    }
+
+    return {
+      rxMbps: rxMbps,
+      txMbps: txMbps,
+      speed: speed
+    };
+  } catch (error) {
+    console.error('Error querying bandwidth data:', error);
+    return null;
+  }
+}
+
+// Placeholder function to find connected device (would need topology database)
+function findConnectedDevice(sourceDeviceId, interfaceName) {
+  // This is a placeholder - in reality you'd have a topology database
+  // or use LLDP/CDP information to determine connections
+
+  // For demo purposes, return null (no connections)
+  // In a real implementation, you might:
+  // 1. Query LLDP neighbors from SNMP
+  // 2. Use a topology database
+  // 3. Use interface naming conventions
+
+  return null;
+}
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
