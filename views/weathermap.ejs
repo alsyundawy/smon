@@ -127,6 +127,34 @@
                     <div id="cy" class="rounded-xl border border-slate-700/50 shadow-xl overflow-hidden" style="height: 600px;"></div>
                 </div>
 
+                <!-- Floating Controls for Fullscreen -->
+                <div id="fullscreen-controls" class="fixed top-4 left-4 z-50 flex gap-2 flex-wrap hidden">
+                    <button onclick="refreshWeathermap()" class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium transition-all hover:shadow-lg hover:shadow-blue-500/25 hover:scale-[1.02] backdrop-blur-sm">
+                        <i class="fas fa-sync" id="refresh-icon-fs"></i>
+                        Refresh
+                    </button>
+                    <button onclick="toggleAutoRefresh()" class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg font-medium transition-all hover:shadow-lg hover:shadow-green-500/25 hover:scale-[1.02] backdrop-blur-sm">
+                        <i class="fas fa-clock" id="auto-refresh-icon-fs"></i>
+                        <span id="auto-refresh-text-fs">Auto (5mins)</span>
+                    </button>
+                    <button onclick="showAddNodeModal()" class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-lg font-medium transition-all hover:shadow-lg hover:shadow-emerald-500/25 hover:scale-[1.02] backdrop-blur-sm">
+                        <i class="fas fa-plus-circle"></i>
+                        Add Node
+                    </button>
+                    <button onclick="showAddLinkModal()" class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg font-medium transition-all hover:shadow-lg hover:shadow-purple-500/25 hover:scale-[1.02] backdrop-blur-sm">
+                        <i class="fas fa-link"></i>
+                        Add Link
+                    </button>
+                    <button onclick="toggleFullscreen()" class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-lg font-medium transition-all hover:shadow-lg hover:shadow-indigo-500/25 hover:scale-[1.02] backdrop-blur-sm">
+                        <i class="fas fa-compress" id="fullscreen-icon-fs"></i>
+                        Exit Fullscreen
+                    </button>
+                    <button onclick="resetLayout()" class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-lg font-medium transition-all hover:shadow-lg hover:shadow-orange-500/25 hover:scale-[1.02] backdrop-blur-sm">
+                        <i class="fas fa-random"></i>
+                        Reset Layout
+                    </button>
+                </div>
+
                 <!-- Add Node Modal -->
                 <div id="addNodeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
                     <div class="bg-slate-800 border border-slate-700 rounded-lg p-6 w-full max-w-md mx-4">
@@ -424,6 +452,7 @@
             try {
                 // Show loading
                 document.getElementById('refresh-icon').classList.add('fa-spin');
+                document.getElementById('refresh-icon-fs').classList.add('fa-spin');
 
                 // Fetch topology data (devices only, links are manual only)
                 const response = await fetch('/api/weathermap/links');
@@ -548,6 +577,7 @@
                 console.error('Error loading weathermap data:', error);
             } finally {
                 document.getElementById('refresh-icon').classList.remove('fa-spin');
+                document.getElementById('refresh-icon-fs').classList.remove('fa-spin');
                 dataLoaded = true; // Mark data as loaded
             }
         }
@@ -634,16 +664,22 @@
             autoRefreshEnabled = !autoRefreshEnabled;
 
             const icon = document.getElementById('auto-refresh-icon');
+            const iconFs = document.getElementById('auto-refresh-icon-fs');
             const text = document.getElementById('auto-refresh-text');
+            const textFs = document.getElementById('auto-refresh-text-fs');
 
             if (autoRefreshEnabled) {
                 startAutoRefresh();
                 icon.className = 'fas fa-clock';
+                iconFs.className = 'fas fa-clock';
                 text.textContent = 'Auto (5mins)';
+                textFs.textContent = 'Auto (5mins)';
             } else {
                 stopAutoRefresh();
                 icon.className = 'fas fa-clock text-gray-400';
+                iconFs.className = 'fas fa-clock text-gray-400';
                 text.textContent = 'Manual';
+                textFs.textContent = 'Manual';
             }
         }
 
@@ -1008,10 +1044,14 @@
         function toggleFullscreen() {
             const elem = document.getElementById('cy');
             const icon = document.getElementById('fullscreen-icon');
+            const iconFs = document.getElementById('fullscreen-icon-fs');
+            const controls = document.getElementById('fullscreen-controls');
 
             if (!document.fullscreenElement) {
                 elem.requestFullscreen().then(() => {
                     icon.className = 'fas fa-compress';
+                    iconFs.className = 'fas fa-compress';
+                    controls.classList.remove('hidden');
                     // Resize Cytoscape to fit fullscreen
                     cy.resize();
                     cy.fit();
@@ -1019,6 +1059,8 @@
             } else {
                 document.exitFullscreen().then(() => {
                     icon.className = 'fas fa-expand';
+                    iconFs.className = 'fas fa-expand';
+                    controls.classList.add('hidden');
                     // Resize Cytoscape back to normal
                     setTimeout(() => {
                         cy.resize();
