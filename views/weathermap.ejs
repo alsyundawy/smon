@@ -755,7 +755,18 @@
         }
 
         function showAddNodeModal() {
-            document.getElementById('addNodeModal').classList.remove('hidden');
+            const modal = document.getElementById('addNodeModal');
+
+            // Adjust modal positioning for fullscreen mode
+            if (document.fullscreenElement) {
+                modal.style.zIndex = '10000';
+                modal.style.position = 'fixed';
+            } else {
+                modal.style.zIndex = '';
+                modal.style.position = '';
+            }
+
+            modal.classList.remove('hidden');
         }
 
         function hideAddNodeModal() {
@@ -809,7 +820,15 @@
                 targetSelect.appendChild(option);
             });
             
-            document.getElementById('addLinkModal').classList.remove('hidden');
+            // Adjust modal positioning for fullscreen mode
+            const addLinkModal = document.getElementById('addLinkModal');
+            if (document.fullscreenElement) {
+                addLinkModal.style.zIndex = '10000';
+            } else {
+                addLinkModal.style.zIndex = '';
+            }
+            
+            addLinkModal.classList.remove('hidden');
         }
 
         // Handle source device selection to populate interfaces

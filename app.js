@@ -22,6 +22,10 @@ let lastCounterValues = {};
 // Key format: `${deviceId}_${interfaceIndex}`, value: estimated speed in Mbps
 let highSpeedInterfaces = {};
 
+// Track which devices have valid CPU SNMP support
+// Key: deviceId, value: {hasCpu: boolean, lastAttempt: timestamp}
+let deviceCpuStatus = {};
+
 // Counter rollover detection and adjustment
 function handleCounterRollover(deviceId, iface, direction, currentValue) {
   const key = `${deviceId}_${iface.index}_${direction}`;
@@ -2339,6 +2343,21 @@ app.get('/monitoring', async (req, res) => {
   }
 });
 
+// Bandwidth Dashboard Route
+app.get('/bandwidth', (req, res) => {
+  try {
+    console.log('Route /bandwidth called');
+    
+    res.render('bandwidth', {
+      title: 'Bandwidth Dashboard',
+      devices: snmpDevices
+    });
+  } catch (err) {
+    console.error('Route error:', err);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
 // API to get all devices
 app.get('/api/devices', (req, res) => {
   res.json(snmpDevices);
@@ -2945,6 +2964,7 @@ app.post('/api/discover-interfaces', (req, res) => {
 
     // Use appropriate OID for interface discovery based on vendor
     const ifDescrOid = getVendorOID(vendor, 'ifDescr');
+    const interfaceMap = {}; // Map to store interfaces by index
 
     tempSession.walk(ifDescrOid, 30, function(varbinds) {
       varbinds.forEach(vb => {
@@ -2955,10 +2975,12 @@ app.post('/api/discover-interfaces', (req, res) => {
           const index = oidParts[oidParts.length - 1];
           // Filter to only accept OID ending with .2.X pattern (ifDescr)
           if (oidParts[oidParts.length - 2] === '2') {
-            interfaces.push({
+            const name = vb.value.toString().trim();
+            interfaceMap[index] = {
               index: parseInt(index),
-              name: vb.value.toString()
-            });
+              name: name,
+              hasName: name.length > 0
+            };
           }
         }
       });
@@ -2966,12 +2988,77 @@ app.post('/api/discover-interfaces', (req, res) => {
       if (error) {
         console.log(`[DISCOVER] SNMP walk error: ${error}`);
       }
-      if (!completed) {
-        completed = true;
-        clearTimeout(timeout);
-        tempSession.close();
-        console.log(`[DISCOVER] SNMP walk completed, found ${interfaces.length} interfaces for ${vendor} device`);
-        res.json({ interfaces, vendor });
+      
+      // After ifDescr walk completes, check for interfaces with empty names and try ifName fallback
+      const emptyNameIndices = Object.keys(interfaceMap)
+        .filter(idx => !interfaceMap[idx].hasName)
+        .map(idx => parseInt(idx));
+      
+      console.log(`[DISCOVER] Found ${Object.keys(interfaceMap).length} interfaces, ${emptyNameIndices.length} with empty names`);
+      
+      if (emptyNameIndices.length > 0) {
+        // Try to get ifName (OID 1.3.6.1.2.1.31.1.1.1.1) for interfaces with empty descriptions
+        // This is especially useful for PPPoE and other virtual interfaces
+        const ifNameOids = emptyNameIndices.map(idx => `1.3.6.1.2.1.31.1.1.1.1.${idx}`);
+        
+        console.log(`[DISCOVER] Attempting to get ifName for ${emptyNameIndices.length} interfaces with empty descriptions`);
+        
+        tempSession.get(ifNameOids, function(error, varbinds) {
+          if (!error && varbinds) {
+            varbinds.forEach((vb, idx) => {
+              if (!snmp.isVarbindError(vb) && vb.value) {
+                const ifName = vb.value.toString().trim();
+                if (ifName.length > 0) {
+                  const index = emptyNameIndices[idx];
+                  console.log(`[DISCOVER] Found ifName for interface ${index}: ${ifName}`);
+                  interfaceMap[index].name = ifName;
+                  interfaceMap[index].hasName = true;
+                }
+              }
+            });
+          } else if (error) {
+            console.log(`[DISCOVER] ifName fallback error: ${error}`);
+          }
+          
+          // Filter interfaces: only include those with valid names, or use index as fallback
+          const filteredInterfaces = Object.values(interfaceMap)
+            .filter(iface => {
+              // If interface has a name, include it
+              if (iface.hasName && iface.name.length > 0) {
+                return true;
+              }
+              // For interfaces without names, use index as fallback name
+              iface.name = `Interface-${iface.index}`;
+              console.log(`[DISCOVER] Using fallback name for interface ${iface.index}: ${iface.name}`);
+              return true;
+            })
+            .sort((a, b) => a.index - b.index);
+          
+          interfaces.push(...filteredInterfaces);
+          
+          if (!completed) {
+            completed = true;
+            clearTimeout(timeout);
+            tempSession.close();
+            console.log(`[DISCOVER] SNMP discovery completed, found ${interfaces.length} interfaces for ${vendor} device`);
+            res.json({ interfaces, vendor });
+          }
+        });
+      } else {
+        // All interfaces have names, proceed with response
+        const filteredInterfaces = Object.values(interfaceMap)
+          .filter(iface => iface.name.length > 0)
+          .sort((a, b) => a.index - b.index);
+        
+        interfaces.push(...filteredInterfaces);
+        
+        if (!completed) {
+          completed = true;
+          clearTimeout(timeout);
+          tempSession.close();
+          console.log(`[DISCOVER] SNMP discovery completed, found ${interfaces.length} interfaces for ${vendor} device`);
+          res.json({ interfaces, vendor });
+        }
       }
     });
   } catch (err) {
@@ -3857,26 +3944,57 @@ function pollSNMP() {
       });
     });
     
-    // Poll CPU usage for this device
+    // Poll CPU usage for this device - but only if CPU has been successfully detected before
+    // or if we haven't tried recently
     const vendor = device.vendor || 'standard';
     const cpuOid = getCpuOID(vendor);
+    
+    // Initialize device CPU status if not exists
+    if (!deviceCpuStatus[deviceId]) {
+      deviceCpuStatus[deviceId] = { hasCpu: null, lastAttempt: 0, failureCount: 0 };
+    }
+    
+    const cpuStatus = deviceCpuStatus[deviceId];
+    const now = Date.now();
+    const oneHourAgo = 60 * 60 * 1000; // 1 hour in milliseconds
+    
+    // Skip CPU polling if:
+    // 1. hasCpu is explicitly false (CPU not detected)
+    // 2. We've had more than 5 consecutive failures (likely no CPU support)
+    if (cpuStatus.hasCpu === false || cpuStatus.failureCount >= 5) {
+      if (cpuStatus.failureCount >= 5) {
+        // Re-check every hour to see if CPU is now available (in case of device restart)
+        if (now - cpuStatus.lastAttempt > oneHourAgo) {
+          console.log(`[${deviceId}] Retrying CPU polling after 1 hour (${cpuStatus.failureCount} failures)`);
+          cpuStatus.failureCount = 0; // Reset counter for re-attempt
+        } else {
+          // Still within cooldown period, skip CPU polling
+          return; // Skip rest of polling for this device (no return here, just skip CPU)
+        }
+      } else {
+        return; // Skip CPU polling
+      }
+    }
+    
     if (cpuOid) {
       console.log(`[${deviceId}] Polling CPU using ${vendor} OID: ${cpuOid}`);
       
       snmpSessions[deviceId].get([cpuOid], function(cpuError, cpuVarbinds) {
         if (cpuError) {
-          // Log timeout errors as warnings instead of errors to reduce noise
-          if (cpuError.message && cpuError.message.includes('Request timed out')) {
-            console.warn(`[${deviceId}] SNMP CPU timeout - skipping CPU polling for this cycle`);
-          } else {
-            console.error(`[${deviceId}] SNMP CPU error:`, cpuError);
-          }
+          // CPU query failed
+          cpuStatus.failureCount++;
+          console.warn(`[${deviceId}] SNMP CPU error (attempt ${cpuStatus.failureCount}): ${cpuError.message}`);
+          
           // Try fallback to standard UCD-SNMP-MIB if vendor-specific OID fails
-          if (vendor !== 'standard') {
+          if (vendor !== 'standard' && cpuStatus.failureCount <= 2) {
             const fallbackCpuOid = '1.3.6.1.4.1.2021.11.9.0'; // UCD-SNMP-MIB CPU usage
             snmpSessions[deviceId].get([fallbackCpuOid], function(fallbackError, fallbackVarbinds) {
               if (!fallbackError && fallbackVarbinds && !snmp.isVarbindError(fallbackVarbinds[0])) {
                 console.log(`[${deviceId}] CPU fallback successful`);
+                cpuStatus.hasCpu = true;
+                cpuStatus.failureCount = 0;
+                cpuStatus.lastAttempt = now;
+                
                 let cpuValue = parseFloat(fallbackVarbinds[0].value);
                 
                 // Mikrotik CPU values are often multiplied by 100, so divide by 100 for percentage
@@ -3888,21 +4006,37 @@ function pollSNMP() {
                   processCpuData(deviceId, device, cpuValue, pollTimestamp);
                 }
               } else {
-                // Fallback also failed, skip CPU for this cycle
-                if (fallbackError && fallbackError.message && fallbackError.message.includes('Request timed out')) {
-                  console.warn(`[${deviceId}] SNMP CPU fallback timeout - CPU data unavailable`);
-                } else {
-                  console.log(`[${deviceId}] CPU fallback failed or not supported`);
+                // Fallback also failed, mark as no CPU
+                cpuStatus.failureCount++;
+                if (cpuStatus.failureCount >= 5) {
+                  cpuStatus.hasCpu = false;
+                  console.warn(`[${deviceId}] CPU SNMP not supported - disabling CPU polling`);
                 }
               }
+              cpuStatus.lastAttempt = now;
             });
           } else {
-            // No fallback available, skip CPU for this cycle
-            console.log(`[${deviceId}] CPU polling failed - data unavailable for this cycle`);
+            // No fallback or too many failures
+            if (cpuStatus.failureCount >= 5) {
+              cpuStatus.hasCpu = false;
+              console.warn(`[${deviceId}] CPU SNMP not supported - disabling CPU polling`);
+            }
+            cpuStatus.lastAttempt = now;
           }
         } else if (snmp.isVarbindError(cpuVarbinds[0])) {
           console.error(`[${deviceId}] SNMP CPU varbind error:`, snmp.varbindError(cpuVarbinds[0]));
+          cpuStatus.failureCount++;
+          if (cpuStatus.failureCount >= 5) {
+            cpuStatus.hasCpu = false;
+            console.warn(`[${deviceId}] CPU SNMP not supported - disabling CPU polling`);
+          }
+          cpuStatus.lastAttempt = now;
         } else {
+          // CPU query successful
+          cpuStatus.hasCpu = true;
+          cpuStatus.failureCount = 0;
+          cpuStatus.lastAttempt = now;
+          
           let cpuValue = parseFloat(cpuVarbinds[0].value);
           
           // Mikrotik CPU values are often multiplied by 100, so divide by 100 for percentage
@@ -3919,6 +4053,8 @@ function pollSNMP() {
       });
     } else {
       console.log(`[${deviceId}] No CPU OID available for vendor: ${vendor}`);
+      cpuStatus.hasCpu = false;
+      cpuStatus.failureCount = 5; // Mark as disabled to skip future polling
     }
   });
   } catch (err) {

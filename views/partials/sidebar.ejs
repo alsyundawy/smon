@@ -46,9 +46,14 @@
             </div>
 
             <div class="space-y-1">
-                <a href="/monitoring" class="flex items-center space-x-3 px-4 py-2 rounded-lg <%= title === 'Bandwidth Monitor' ? 'bg-white/20' : 'hover:bg-white/10' %> transition-colors">
+                <a href="/monitoring" class="flex items-center space-x-3 px-4 py-2 rounded-lg <%= title === 'Bandwidth Monitoring' ? 'bg-white/20' : 'hover:bg-white/10' %> transition-colors">
                     <i class="fas fa-gauge-high w-4"></i>
                     <span :class="sidebarOpen ? 'block' : 'hidden'">Bandwidth Monitor</span>
+                </a>
+
+                <a href="/bandwidth" class="flex items-center space-x-3 px-4 py-2 rounded-lg <%= title === 'Bandwidth Dashboard' ? 'bg-white/20' : 'hover:bg-white/10' %> transition-colors">
+                    <i class="fas fa-chart-line w-4"></i>
+                    <span :class="sidebarOpen ? 'block' : 'hidden'">Bandwidth Dashboard</span>
                 </a>
 
                 <a href="/ping" class="flex items-center space-x-3 px-4 py-2 rounded-lg <%= title === 'Ping Monitor' ? 'bg-white/20' : 'hover:bg-white/10' %> transition-colors">

@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <%- include('partials/head') %>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.umd.min.js"></script>
+    <style>
+      * {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      body {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        overflow-x: hidden;
+      }
+
+      /* Glass Morphism Effect */
+      .glass-card {
+        background: rgba(51, 65, 85, 0.4);
+        backdrop-filter: blur(10px) saturate(180%);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      }
+
+      /* Smooth Gradient Buttons */
+      .btn-gradient {
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+      }
+
+      .btn-gradient::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.2);
+        transition: left 0.3s ease;
+      }
+
+      .btn-gradient:hover::before {
+        left: 100%;
+      }
+
+      .btn-gradient:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+      }
+
+      /* Premium Button Colors */
+      .btn-primary {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      }
+
+      .btn-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      }
+
+      .btn-danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      }
+
+      .btn-secondary {
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      }
+
+      /* Smooth Animations */
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes slideInRight {
+        from {
+          opacity: 0;
+          transform: translateX(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      .animate-fade-in-up {
+        animation: fadeInUp 0.5s ease-out;
+      }
+
+      .animate-slide-in {
+        animation: slideInRight 0.3s ease-out;
+      }
+
+      /* Enhanced Controls Panel */
+      .controls-panel {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      }
+
+      .bandwidth-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
+        gap: 2rem;
+        animation: fadeInUp 0.6s ease-out;
+      }
+
+      @media (max-width: 1200px) {
+        .bandwidth-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .chart-container {
+        position: relative;
+        height: 380px;
+        margin-bottom: 1.5rem;
+      }
+
+      /* Statistics Display */
+      .stats-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .stat-item {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(34, 197, 94, 0.1) 100%);
+        border-left: 3px solid #3b82f6;
+        padding: 0.75rem 1rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        transition: all 0.3s ease;
+      }
+
+      .stat-item:hover {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(34, 197, 94, 0.2) 100%);
+        transform: translateY(-2px);
+      }
+
+      .stat-item.tx {
+        border-left-color: #3b82f6;
+      }
+
+      .stat-item.rx {
+        border-left-color: #10b981;
+      }
+
+      .stat-label {
+        color: #94a3b8;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+      }
+
+      .stat-value {
+        color: #e2e8f0;
+        font-weight: 600;
+        font-size: 1rem;
+      }
+
+      /* Enhanced Tooltips */
+      .tooltip {
+        position: relative;
+        display: inline-block;
+        cursor: help;
+      }
+
+      .tooltip .tooltiptext {
+        visibility: hidden;
+        background-color: rgba(15, 23, 42, 0.95);
+        color: #e2e8f0;
+        text-align: center;
+        border-radius: 6px;
+        padding: 0.5rem 0.75rem;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -75px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        font-size: 0.75rem;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        white-space: nowrap;
+      }
+
+      .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      /* Toast Notifications with Gradient */
+      #toast-container {
+        z-index: 9999;
+      }
+
+      .toast {
+        animation: slideInRight 0.3s ease-out;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(34, 197, 94, 0.9) 100%);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      }
+
+      /* Smooth Transitions */
+      select, input {
+        transition: all 0.3s ease;
+      }
+
+      select:focus, input:focus {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), 0 0 0 1px rgba(59, 130, 246, 0.5) !important;
+      }
+
+      /* Loading Animation */
+      @keyframes pulse {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .loading {
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+
+      /* Badge Styling */
+      .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .badge-blue {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%);
+        color: #60a5fa;
+      }
+
+      .badge-green {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%);
+        color: #34d399;
+      }
+
+      .chart-card {
+        background: linear-gradient(135deg, rgba(51, 65, 85, 0.4) 0%, rgba(30, 41, 59, 0.4) 100%);
+        backdrop-filter: blur(10px) saturate(180%);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s ease;
+      }
+
+      .chart-card:hover {
+        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+        border-color: rgba(148, 163, 184, 0.5);
+      }
+
+      /* Icon styling */
+      .icon-box {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 3rem 1.5rem;
+        color: #94a3b8;
+      }
+
+      .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+      }
+    </style>
+</head>
+<body class="h-full text-gray-100" x-data="{ sidebarOpen: true }">
+    <%- include('partials/sidebar') %>
+
+    <!-- Main Content -->
+    <div class="transition-all duration-300" :class="sidebarOpen ? 'ml-64' : 'ml-20'">
+        <div class="flex flex-col min-h-screen">
+            <%- include('partials/header') %>
+
+            <!-- Content Area -->
+            <main class="flex-1 overflow-y-auto p-6 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+                <!-- Flash Messages -->
+                <%- include('partials/flash') %>
+
+                <!-- Page Title with Premium Styling -->
+                <div class="mb-8 animate-fade-in-up">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-4xl font-bold text-white flex items-center gap-4">
+                                <div class="icon-box bg-gradient-to-br from-blue-500 via-cyan-500 to-blue-600 text-white">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                                <span class="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Bandwidth Dashboard</span>
+                            </h2>
+                            <p class="text-slate-400 text-sm mt-2 ml-16 font-medium">Real-time Multi-Interface Bandwidth Monitoring & Analysis</p>
+                        </div>
+                        <div class="hidden sm:block">
+                            <span class="px-4 py-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-lg text-green-300 text-sm font-semibold">
+                                <i class="fas fa-circle text-green-400 text-xs mr-2 animate-pulse"></i>Live
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls Panel -->
+                <div class="controls-panel p-6 mb-8 animate-fade-in-up">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <!-- Time Range Selector -->
+                        <div class="space-y-3">
+                            <label class="block text-sm font-bold text-slate-300 flex items-center gap-2 uppercase tracking-wide">
+                                <div class="icon-box bg-gradient-to-br from-purple-500 to-pink-500 text-white text-xs">
+                                    <i class="fas fa-calendar-alt"></i>
+                                </div>
+                                <span>Time Range</span>
+                            </label>
+                            <select id="time-range-selector" class="w-full glass-card text-white font-medium px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 text-sm cursor-pointer">
+                                <option value="-1h" selected style="background-color: #1e293b; color: white;">📊 Last 1 Hour</option>
+                                <option value="-24h" style="background-color: #1e293b; color: white;">📈 Last 24 Hours</option>
+                                <option value="-7d" style="background-color: #1e293b; color: white;">📉 Last 7 Days</option>
+                                <option value="-30d" style="background-color: #1e293b; color: white;">📅 Last 30 Days</option>
+                                <option value="custom" style="background-color: #1e293b; color: white;">⏰ Custom Range</option>
+                            </select>
+                        </div>
+
+                        <!-- Auto Refresh Selector -->
+                        <div class="space-y-3">
+                            <label class="block text-sm font-bold text-slate-300 flex items-center gap-2 uppercase tracking-wide">
+                                <div class="icon-box bg-gradient-to-br from-cyan-500 to-blue-500 text-white text-xs">
+                                    <i class="fas fa-sync-alt"></i>
+                                </div>
+                                <span>Auto Refresh</span>
+                            </label>
+                            <select id="auto-refresh-selector" class="w-full glass-card text-white font-medium px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200 text-sm cursor-pointer">
+                                <option value="0" selected style="background-color: #1e293b; color: white;">Disabled</option>
+                                <option value="30" style="background-color: #1e293b; color: white;">⚡ Every 30s</option>
+                                <option value="60" style="background-color: #1e293b; color: white;">Every 1 min</option>
+                                <option value="300" style="background-color: #1e293b; color: white;">Every 5 min</option>
+                                <option value="600" style="background-color: #1e293b; color: white;">Every 10 min</option>
+                            </select>
+                        </div>
+
+                        <!-- Load Data Button -->
+                        <div class="space-y-3 flex flex-col justify-end">
+                            <div class="opacity-0 text-sm font-bold uppercase tracking-wide">Placeholder</div>
+                            <button onclick="loadAllCharts()" class="btn-gradient btn-primary text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-500/25 w-full">
+                                <i class="fas fa-chart-bar"></i>
+                                <span>Load Charts</span>
+                            </button>
+                        </div>
+
+                        <!-- Reset Button -->
+                        <div class="space-y-3 flex flex-col justify-end">
+                            <div class="opacity-0 text-sm font-bold uppercase tracking-wide">Placeholder</div>
+                            <button onclick="resetGraphs()" class="btn-gradient btn-danger text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-red-500/25 w-full">
+                                <i class="fas fa-redo"></i>
+                                <span>Reset</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Custom Date Range (Hidden by default) -->
+                    <div id="custom-date-range" class="hidden mt-6 pt-6 border-t border-slate-600/50 grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in-up">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-300 mb-3 flex items-center gap-2 uppercase tracking-wide">
+                                <i class="fas fa-calendar-plus text-blue-400"></i>
+                                From Date
+                            </label>
+                            <input type="datetime-local" id="date-from-input" class="w-full glass-card text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-300 mb-3 flex items-center gap-2 uppercase tracking-wide">
+                                <i class="fas fa-calendar-check text-blue-400"></i>
+                                To Date
+                            </label>
+                            <input type="datetime-local" id="date-to-input" class="w-full glass-card text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200">
+                        </div>
+                        <div class="flex flex-col justify-end">
+                            <button onclick="applyCustomRange()" class="btn-gradient btn-secondary text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-purple-500/25">
+                                <i class="fas fa-check"></i>
+                                <span>Apply</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Info Bar -->
+                    <div class="mt-6 pt-6 border-t border-slate-600/30 flex items-center justify-between">
+                        <div class="flex items-center gap-3 text-slate-400 text-sm">
+                            <i class="fas fa-info-circle text-blue-400"></i>
+                            <span>Select devices and interfaces, then click "Load Charts" to display bandwidth data</span>
+                        </div>
+                        <div id="chart-counter" class="px-4 py-2 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 rounded-lg text-blue-300 text-sm font-semibold">
+                            <span class="chart-count">0</span> / <span class="max-charts">N/A</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Row Button (Floating) -->
+                <div class="mb-6 flex items-center justify-between animate-fade-in-up">
+                    <div>
+                        <h3 class="text-lg font-bold text-white flex items-center gap-3">
+                            <div class="w-1 h-6 bg-gradient-to-b from-blue-400 to-cyan-400 rounded"></div>
+                            Bandwidth Charts
+                        </h3>
+                        <p class="text-slate-400 text-sm mt-1">Multi-interface monitoring with RX/TX dual-line visualization</p>
+                    </div>
+                    <button onclick="addGraphRow()" class="btn-gradient btn-success text-white font-bold py-2 px-6 rounded-lg transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-green-500/25">
+                        <i class="fas fa-plus"></i>
+                        <span>Add Chart</span>
+                    </button>
+                </div>
+
+                <!-- Bandwidth Grid -->
+                <div id="bandwidth-grid" class="bandwidth-grid">
+                    <!-- Initial row with 2 graphs -->
+                    <div class="graph-row-item">
+                        <div class="chart-card">
+                            <!-- Device & Interface Selectors -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div class="space-y-3">
+                                    <label class="block text-sm font-bold text-slate-300 flex items-center gap-2 uppercase tracking-wide">
+                                        <div class="icon-box bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xs">
+                                            <i class="fas fa-server"></i>
+                                        </div>
+                                        Device
+                                    </label>
+                                    <select class="device-selector w-full glass-card text-white font-medium px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 text-sm cursor-pointer">
+                                        <option value="" style="background-color: #1e293b; color: white;">Select Device...</option>
+                                        <% Object.entries(devices).forEach(([key, device]) => { %>
+                                            <option value="<%= key %>" style="background-color: #1e293b; color: white;">
+                                                <%= device.name %>
+                                            </option>
+                                        <% }); %>
+                                    </select>
+                                </div>
+                                <div class="space-y-3">
+                                    <label class="block text-sm font-bold text-slate-300 flex items-center gap-2 uppercase tracking-wide">
+                                        <div class="icon-box bg-gradient-to-br from-green-500 to-green-600 text-white text-xs">
+                                            <i class="fas fa-network-wired"></i>
+                                        </div>
+                                        Interface
+                                    </label>
+                                    <select class="interface-selector w-full glass-card text-white font-medium px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200 text-sm cursor-pointer">
+                                        <option value="" style="background-color: #1e293b; color: white;">Select Interface...</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Chart -->
+                            <div class="chart-container mb-4">
+                                <canvas class="bandwidth-chart"></canvas>
+                            </div>
+
+                            <!-- Statistics Row -->
+                            <div class="stats-row hidden">
+                                <div class="stat-item rx">
+                                    <div class="stat-label">RX Peak</div>
+                                    <div class="stat-value"><span class="rx-peak">0</span> Mbps</div>
+                                </div>
+                                <div class="stat-item tx">
+                                    <div class="stat-label">TX Peak</div>
+                                    <div class="stat-value"><span class="tx-peak">0</span> Mbps</div>
+                                </div>
+                                <div class="stat-item rx">
+                                    <div class="stat-label">RX Average</div>
+                                    <div class="stat-value"><span class="rx-avg">0</span> Mbps</div>
+                                </div>
+                                <div class="stat-item tx">
+                                    <div class="stat-label">TX Average</div>
+                                    <div class="stat-value"><span class="tx-avg">0</span> Mbps</div>
+                                </div>
+                            </div>
+
+                            <!-- Remove Button -->
+                            <button onclick="removeGraphRow(this)" class="btn-gradient btn-danger text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 text-sm w-full flex items-center justify-center gap-2">
+                                <i class="fas fa-trash"></i>Remove Chart
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="graph-row-item">
+                        <div class="chart-card">
+                            <!-- Device & Interface Selectors -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div class="space-y-3">
+                                    <label class="block text-sm font-bold text-slate-300 flex items-center gap-2 uppercase tracking-wide">
+                                        <div class="icon-box bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xs">
+                                            <i class="fas fa-server"></i>
+                                        </div>
+                                        Device
+                                    </label>
+                                    <select class="device-selector w-full glass-card text-white font-medium px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 text-sm cursor-pointer">
+                                        <option value="" style="background-color: #1e293b; color: white;">Select Device...</option>
+                                        <% Object.entries(devices).forEach(([key, device]) => { %>
+                                            <option value="<%= key %>" style="background-color: #1e293b; color: white;">
+                                                <%= device.name %>
+                                            </option>
+                                        <% }); %>
+                                    </select>
+                                </div>
+                                <div class="space-y-3">
+                                    <label class="block text-sm font-bold text-slate-300 flex items-center gap-2 uppercase tracking-wide">
+                                        <div class="icon-box bg-gradient-to-br from-green-500 to-green-600 text-white text-xs">
+                                            <i class="fas fa-network-wired"></i>
+                                        </div>
+                                        Interface
+                                    </label>
+                                    <select class="interface-selector w-full glass-card text-white font-medium px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200 text-sm cursor-pointer">
+                                        <option value="" style="background-color: #1e293b; color: white;">Select Interface...</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Chart -->
+                            <div class="chart-container mb-4">
+                                <canvas class="bandwidth-chart"></canvas>
+                            </div>
+
+                            <!-- Statistics Row -->
+                            <div class="stats-row hidden">
+                                <div class="stat-item rx">
+                                    <div class="stat-label">RX Peak</div>
+                                    <div class="stat-value"><span class="rx-peak">0</span> Mbps</div>
+                                </div>
+                                <div class="stat-item tx">
+                                    <div class="stat-label">TX Peak</div>
+                                    <div class="stat-value"><span class="tx-peak">0</span> Mbps</div>
+                                </div>
+                                <div class="stat-item rx">
+                                    <div class="stat-label">RX Average</div>
+                                    <div class="stat-value"><span class="rx-avg">0</span> Mbps</div>
+                                </div>
+                                <div class="stat-item tx">
+                                    <div class="stat-label">TX Average</div>
+                                    <div class="stat-value"><span class="tx-avg">0</span> Mbps</div>
+                                </div>
+                            </div>
+
+                            <!-- Remove Button -->
+                            <button onclick="removeGraphRow(this)" class="btn-gradient btn-danger text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 text-sm w-full flex items-center justify-center gap-2">
+                                <i class="fas fa-trash"></i>Remove Chart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-3"></div>
+
+    <script>
+        let chartInstances = {};
+        let graphRowCounter = 2;
+        let autoRefreshInterval = null;
+        let currentTimeRange = '-1h';
+
+        // Show Toast Notification
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const iconMap = {
+                'success': 'check-circle',
+                'error': 'times-circle',
+                'warning': 'exclamation-circle',
+                'info': 'info-circle'
+            };
+            
+            const colorClasses = {
+                'success': 'from-green-600 to-emerald-600',
+                'error': 'from-red-600 to-rose-600',
+                'warning': 'from-yellow-600 to-amber-600',
+                'info': 'from-blue-600 to-cyan-600'
+            };
+            
+            toast.className = `toast bg-gradient-to-r ${colorClasses[type]} text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 font-semibold`;
+            toast.innerHTML = `
+                <i class="fas fa-${iconMap[type]}"></i>
+                <span>${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'slideInRight 0.3s ease-out reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Calculate Statistics
+        function calculateStats(data) {
+            if (!data || data.length === 0) {
+                return { peak: 0, average: 0 };
+            }
+            
+            const validData = data.filter(v => v !== null && v !== undefined && !isNaN(v));
+            if (validData.length === 0) {
+                return { peak: 0, average: 0 };
+            }
+            
+            const peak = Math.max(...validData);
+            const average = validData.reduce((a, b) => a + b, 0) / validData.length;
+            
+            return {
+                peak: peak.toFixed(2),
+                average: average.toFixed(2)
+            };
+        }
+
+        // Load interfaces when device changes
+        document.addEventListener('change', async function(e) {
+            if (e.target.classList.contains('device-selector')) {
+                const deviceId = e.target.value;
+                const interfaceSelector = e.target.closest('.graph-row-item').querySelector('.interface-selector');
+                
+                if (deviceId) {
+                    await loadDeviceInterfaces(deviceId, interfaceSelector);
+                } else {
+                    interfaceSelector.innerHTML = '<option value="" style="background-color: rgb(30 41 59); color: white;">Select Interface...</option>';
+                }
+            }
+        });
+
+        // Load interfaces for selected device
+        async function loadDeviceInterfaces(deviceId, interfaceSelector) {
+            try {
+                const response = await fetch(`/api/devices/${deviceId}/interfaces`);
+                const interfaces = await response.json();
+                
+                interfaceSelector.innerHTML = '<option value="" style="background-color: rgb(30 41 59); color: white;">Select Interface...</option>';
+                
+                interfaces.forEach(iface => {
+                    const option = document.createElement('option');
+                    option.value = iface.name;
+                    option.textContent = iface.name;
+                    option.style.backgroundColor = '#1e293b';
+                    option.style.color = 'white';
+                    interfaceSelector.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading interfaces:', error);
+                showToast('Error loading interfaces', 'error');
+            }
+        }
+
+        // Add new graph row
+        function addGraphRow() {
+            graphRowCounter++;
+            const grid = document.getElementById('bandwidth-grid');
+            
+            const rowItem = document.createElement('div');
+            rowItem.className = 'graph-row-item animate-slide-in';
+            rowItem.innerHTML = `
+                <div class="chart-card">
+                    <!-- Device & Interface Selectors -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div class="space-y-3">
+                            <label class="block text-sm font-bold text-slate-300 flex items-center gap-2 uppercase tracking-wide">
+                                <div class="icon-box bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xs">
+                                    <i class="fas fa-server"></i>
+                                </div>
+                                Device
+                            </label>
+                            <select class="device-selector w-full glass-card text-white font-medium px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 text-sm cursor-pointer">
+                                <option value="" style="background-color: #1e293b; color: white;">Select Device...</option>
+                                <% Object.entries(devices).forEach(([key, device]) => { %>
+                                    <option value="<%= key %>" style="background-color: #1e293b; color: white;">
+                                        <%= device.name %>
+                                    </option>
+                                <% }); %>
+                            </select>
+                        </div>
+                        <div class="space-y-3">
+                            <label class="block text-sm font-bold text-slate-300 flex items-center gap-2 uppercase tracking-wide">
+                                <div class="icon-box bg-gradient-to-br from-green-500 to-green-600 text-white text-xs">
+                                    <i class="fas fa-network-wired"></i>
+                                </div>
+                                Interface
+                            </label>
+                            <select class="interface-selector w-full glass-card text-white font-medium px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200 text-sm cursor-pointer">
+                                <option value="" style="background-color: #1e293b; color: white;">Select Interface...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Chart -->
+                    <div class="chart-container mb-4">
+                        <canvas class="bandwidth-chart"></canvas>
+                    </div>
+
+                    <!-- Statistics Row -->
+                    <div class="stats-row hidden">
+                        <div class="stat-item rx">
+                            <div class="stat-label">RX Peak</div>
+                            <div class="stat-value"><span class="rx-peak">0</span> Mbps</div>
+                        </div>
+                        <div class="stat-item tx">
+                            <div class="stat-label">TX Peak</div>
+                            <div class="stat-value"><span class="tx-peak">0</span> Mbps</div>
+                        </div>
+                        <div class="stat-item rx">
+                            <div class="stat-label">RX Average</div>
+                            <div class="stat-value"><span class="rx-avg">0</span> Mbps</div>
+                        </div>
+                        <div class="stat-item tx">
+                            <div class="stat-label">TX Average</div>
+                            <div class="stat-value"><span class="tx-avg">0</span> Mbps</div>
+                        </div>
+                    </div>
+
+                    <!-- Remove Button -->
+                    <button onclick="removeGraphRow(this)" class="btn-gradient btn-danger text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 text-sm w-full flex items-center justify-center gap-2">
+                        <i class="fas fa-trash"></i>Remove Chart
+                    </button>
+                </div>
+            `;
+            
+            grid.appendChild(rowItem);
+            showToast('New graph row added successfully', 'success');
+        }
+
+        // Remove graph row
+        function removeGraphRow(button) {
+            const rowItem = button.closest('.graph-row-item');
+            const canvas = rowItem.querySelector('.bandwidth-chart');
+            
+            // Destroy chart if exists
+            if (canvas && chartInstances[canvas.id]) {
+                chartInstances[canvas.id].destroy();
+                delete chartInstances[canvas.id];
+            }
+            
+            rowItem.remove();
+            showToast('Graph row removed', 'success');
+        }
+
+        // Reset all graphs
+        function resetGraphs() {
+            // Clear all charts
+            Object.values(chartInstances).forEach(chart => {
+                if (chart) chart.destroy();
+            });
+            chartInstances = {};
+            
+            // Reset all selectors
+            document.querySelectorAll('.device-selector').forEach(selector => selector.value = '');
+            document.querySelectorAll('.interface-selector').forEach(selector => {
+                selector.innerHTML = '<option value="" style="background-color: #1e293b; color: white;">Select Interface...</option>';
+            });
+            
+            // Clear all canvases
+            document.querySelectorAll('.bandwidth-chart').forEach(canvas => {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            });
+            
+            // Hide all stats rows
+            document.querySelectorAll('.stats-row').forEach(row => row.classList.add('hidden'));
+            
+            showToast('All graphs reset successfully', 'success');
+        }
+
+        // Apply custom range
+        function applyCustomRange() {
+            const dateFrom = document.getElementById('date-from-input').value;
+            const dateTo = document.getElementById('date-to-input').value;
+            
+            if (!dateFrom || !dateTo) {
+                showToast('Please select both From and To dates', 'warning');
+                return;
+            }
+            
+            const startDate = new Date(dateFrom);
+            const endDate = new Date(dateTo);
+            
+            if (startDate >= endDate) {
+                showToast('From date must be before To date', 'warning');
+                return;
+            }
+            
+            document.getElementById('time-range-selector').value = 'custom';
+            loadAllCharts();
+        }
+
+        // Load all charts
+        async function loadAllCharts() {
+            const grid = document.getElementById('bandwidth-grid');
+            const items = grid.querySelectorAll('.graph-row-item');
+            
+            let chartsToLoad = 0;
+            items.forEach((item, index) => {
+                const deviceSelector = item.querySelector('.device-selector');
+                const interfaceSelector = item.querySelector('.interface-selector');
+                
+                if (deviceSelector.value && interfaceSelector.value) {
+                    chartsToLoad++;
+                }
+            });
+            
+            if (chartsToLoad === 0) {
+                showToast('Please select at least one device and interface', 'warning');
+                return;
+            }
+            
+            // Get time range
+            const timeRange = document.getElementById('time-range-selector').value;
+            let timeRangeParam = timeRange;
+            
+            if (timeRange === 'custom') {
+                const dateFrom = document.getElementById('date-from-input').value;
+                const dateTo = document.getElementById('date-to-input').value;
+                
+                if (!dateFrom || !dateTo) {
+                    showToast('Please select both From and To dates', 'warning');
+                    return;
+                }
+                
+                const startDate = new Date(dateFrom);
+                const endDate = new Date(dateTo);
+                
+                if (startDate >= endDate) {
+                    showToast('From date must be before To date', 'warning');
+                    return;
+                }
+                
+                timeRangeParam = `custom:${startDate.toISOString()},${endDate.toISOString()}`;
+            }
+            
+            currentTimeRange = timeRangeParam;
+            
+            // Update chart counter
+            document.querySelector('.chart-count').textContent = chartsToLoad;
+            
+            // Load each chart
+            items.forEach((item, index) => {
+                const deviceSelector = item.querySelector('.device-selector');
+                const interfaceSelector = item.querySelector('.interface-selector');
+                const canvas = item.querySelector('.bandwidth-chart');
+                
+                if (deviceSelector.value && interfaceSelector.value) {
+                    loadBandwidthChart(deviceSelector.value, interfaceSelector.value, canvas, timeRangeParam, item);
+                }
+            });
+            
+            showToast(`Loading ${chartsToLoad} chart(s)...`, 'info');
+        }
+
+        // Load individual bandwidth chart
+        async function loadBandwidthChart(deviceId, interfaceName, canvas, timeRangeParam, rowItem) {
+            try {
+                // Ensure canvas has an ID
+                if (!canvas.id) {
+                    canvas.id = `chart-${deviceId}-${interfaceName.replace(/[^a-zA-Z0-9]/g, '_')}-${Math.random().toString(36).substr(2, 9)}`;
+                }
+                
+                // Destroy old chart if exists
+                if (chartInstances[canvas.id]) {
+                    chartInstances[canvas.id].destroy();
+                }
+                
+                // Load RX data
+                const rxResponse = await fetch(`/api/data?device=${encodeURIComponent(deviceId)}&interface=${encodeURIComponent(interfaceName)}&direction=rx&timeRange=${encodeURIComponent(timeRangeParam)}`);
+                const rxData = await rxResponse.json();
+                
+                // Load TX data
+                const txResponse = await fetch(`/api/data?device=${encodeURIComponent(deviceId)}&interface=${encodeURIComponent(interfaceName)}&direction=tx&timeRange=${encodeURIComponent(timeRangeParam)}`);
+                const txData = await txResponse.json();
+                
+                // Prepare chart data
+                const timestamps = new Set();
+                rxData.forEach(d => timestamps.add(d.time));
+                txData.forEach(d => timestamps.add(d.time));
+                const sortedTimestamps = Array.from(timestamps).sort();
+                
+                const rxValues = sortedTimestamps.map(ts => {
+                    const point = rxData.find(d => d.time === ts);
+                    return point ? point.value : null;
+                });
+                
+                const txValues = sortedTimestamps.map(ts => {
+                    const point = txData.find(d => d.time === ts);
+                    return point ? point.value : null;
+                });
+                
+                // Calculate statistics
+                const rxStats = calculateStats(rxValues);
+                const txStats = calculateStats(txValues);
+                
+                // Update statistics display
+                const statsRow = rowItem.querySelector('.stats-row');
+                if (statsRow) {
+                    statsRow.querySelector('.rx-peak').textContent = rxStats.peak;
+                    statsRow.querySelector('.tx-peak').textContent = txStats.peak;
+                    statsRow.querySelector('.rx-avg').textContent = rxStats.average;
+                    statsRow.querySelector('.tx-avg').textContent = txStats.average;
+                    statsRow.classList.remove('hidden');
+                }
+                
+                // Create chart
+                const ctx = canvas.getContext('2d');
+                chartInstances[canvas.id] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: sortedTimestamps.map(ts => new Date(ts).toLocaleTimeString()),
+                        datasets: [
+                            {
+                                label: 'RX (Mbps)',
+                                data: rxValues,
+                                borderColor: 'rgb(34, 197, 94)',
+                                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                                borderWidth: 2.5,
+                                fill: true,
+                                tension: 0.4,
+                                pointRadius: 0,
+                                pointHoverRadius: 8,
+                                pointBackgroundColor: 'rgb(34, 197, 94)',
+                                pointBorderColor: 'rgba(34, 197, 94, 0.8)',
+                                pointBorderWidth: 2
+                            },
+                            {
+                                label: 'TX (Mbps)',
+                                data: txValues,
+                                borderColor: 'rgb(59, 130, 246)',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                borderWidth: 2.5,
+                                fill: true,
+                                tension: 0.4,
+                                pointRadius: 0,
+                                pointHoverRadius: 8,
+                                pointBackgroundColor: 'rgb(59, 130, 246)',
+                                pointBorderColor: 'rgba(59, 130, 246, 0.8)',
+                                pointBorderWidth: 2
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#e5e7eb',
+                                    font: { size: 12, weight: 600 },
+                                    padding: 15,
+                                    usePointStyle: true
+                                }
+                            },
+                            filler: {
+                                propagate: true
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#94a3b8',
+                                    font: { size: 11 }
+                                },
+                                grid: {
+                                    color: 'rgba(148, 163, 184, 0.1)',
+                                    drawBorder: false
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#94a3b8',
+                                    maxTicksLimit: 8,
+                                    font: { size: 11 }
+                                },
+                                grid: {
+                                    display: false,
+                                    drawBorder: false
+                                }
+                            }
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        }
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Error loading bandwidth chart:', error);
+                showToast(`Error loading data for ${interfaceName}`, 'error');
+            }
+        }
+
+        // Auto Refresh Logic
+        function setupAutoRefresh() {
+            const refreshInterval = parseInt(document.getElementById('auto-refresh-selector').value);
+            
+            // Clear existing interval
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            
+            if (refreshInterval > 0) {
+                autoRefreshInterval = setInterval(() => {
+                    loadAllCharts();
+                }, refreshInterval * 1000);
+                
+                showToast(`Auto-refresh enabled: every ${refreshInterval}s`, 'success');
+            } else {
+                showToast('Auto-refresh disabled', 'info');
+            }
+        }
+
+        // Handle custom date range visibility
+        document.getElementById('time-range-selector').addEventListener('change', function() {
+            const customRange = document.getElementById('custom-date-range');
+            if (this.value === 'custom') {
+                customRange.classList.remove('hidden');
+            } else {
+                customRange.classList.add('hidden');
+            }
+        });
+
+        // Handle auto refresh selector change
+        document.getElementById('auto-refresh-selector').addEventListener('change', setupAutoRefresh);
+
+        // Initialize
+        window.addEventListener('load', function() {
+            showToast('Welcome to Bandwidth Dashboard - Select devices and interfaces to begin', 'info');
+        });
+    </script>
+</body>
+</html>
