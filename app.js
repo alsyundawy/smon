@@ -219,6 +219,21 @@ const VENDOR_OIDS = {
     hpIfOutOctets: '1.3.6.1.4.1.11.2.14.11.5.1.9.6.1.10', // HP interface out octets
     // HP CPU usage
     hpCpuUtilization: '1.3.6.1.4.1.11.2.14.11.5.1.9.6.1.4' // HP CPU utilization
+  },
+  // Fortigate specific OIDs (FORTINET-FORTIGATE-MIB)
+  fortigate: {
+    ifDescr: '1.3.6.1.2.1.2.2.1.2',
+    ifInOctets: '1.3.6.1.2.1.2.2.1.10',
+    ifOutOctets: '1.3.6.1.2.1.2.2.1.16',
+    sysDescr: '1.3.6.1.2.1.1.1.0',
+    // Fortigate specific metrics
+    fgSysCpuUsage: '1.3.6.1.4.1.12356.101.4.1.3.0',        // CPU usage percentage
+    fgSysMemUsage: '1.3.6.1.4.1.12356.101.4.1.4.0',        // Memory usage percentage
+    fgSysUptime: '1.3.6.1.4.1.12356.101.4.1.1.0',          // System uptime (sysUpTime)
+    fgSysSerialNumber: '1.3.6.1.4.1.12356.101.4.1.2.0',    // Serial number
+    fgHaStatus: '1.3.6.1.4.1.12356.101.13.2.1.0',          // HA (High Availability) status
+    fgHaMasterSerial: '1.3.6.1.4.1.12356.101.13.2.1.2.0',  // HA master serial number
+    fgHaSlaveSerial: '1.3.6.1.4.1.12356.101.13.2.1.3.0'    // HA slave serial number
   }
 };
 
@@ -226,6 +241,7 @@ const VENDOR_OIDS = {
 function detectVendor(sysDescr) {
   const descr = sysDescr.toLowerCase();
   
+  if (descr.includes('fortigate') || descr.includes('fortinet')) return 'fortigate';
   if (descr.includes('cisco')) return 'cisco';
   if (descr.includes('huawei')) return 'huawei';
   if (descr.includes('mikrotik') || descr.includes('routeros')) return 'mikrotik';
@@ -257,6 +273,8 @@ function getCpuOID(vendor) {
       return vendorConfig['jnxOperatingCPU'];
     case 'hp':
       return vendorConfig['hpCpuUtilization'];
+    case 'fortigate':
+      return vendorConfig['fgSysCpuUsage'];
     default:
       return vendorConfig['cpuUsage']; // Standard UCD-SNMP
   }
